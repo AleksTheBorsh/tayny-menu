@@ -131,8 +131,16 @@ const IMG={'Основное меню':'sec_main.jpg','Меню завтрако
 function imgFor(t){return IMG[t]||'sec_main.jpg';}
 
 async function loadData(){
-  try{DATA=await (await fetch('menu.json?t='+Date.now())).json();}catch(e){DATA={groups:[]};}
-  $('credit').textContent=`Тайны Камчатки · меню из R_Keeper · ${DATA.total||0} блюд · обновлено ${DATA.generated||'—'}`;
+  for(let a=0;a<5;a++){
+    try{
+      const r=await fetch('menu.json?t='+Date.now(),{cache:'no-store'});
+      if(r.ok){ DATA=await r.json();
+        $('credit').textContent=`Тайны Камчатки · меню из R_Keeper · ${DATA.total||0} блюд · обновлено ${DATA.generated||'—'}`;
+        return true; }
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,700));
+  }
+  return false;
 }
 
 function toLanding(){
@@ -215,7 +223,10 @@ function dish(it){
     ${it.desc?`<div class="ds">${esc(it.desc)}</div>`:''}${(bju||alg)?`<div class="ex">${bju}${alg}</div>`:''}</div>`;
 }
 
-(async()=>{await loadData();
+(async()=>{
+  $('view').innerHTML='<p class="empty">Загрузка меню…</p>';
+  const ok=await loadData();
+  if(!ok){ $('view').innerHTML='<p class="empty">Не удалось загрузить меню.<br>Обновите страницу.</p>'; return; }
   const m=location.hash.match(/^#s(\d+)/);
   if(m && (DATA.groups||[])[+m[1]]) openSection(+m[1]); else toLanding();
 })();
