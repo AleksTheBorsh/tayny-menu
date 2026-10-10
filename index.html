@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тайны Камчатки — меню</title>
+<style>
+  :root{
+    --bg:#f3ede2; --paper:#fbf8f1; --ink:#20272b; --soft:#5d6b74; --faint:#9aa4ab;
+    --line:#e5ddcd; --gold:#b8945f; --gold-d:#9c7a46; --sea:#2f5d50;
+    --topbar:56px; --secbar:48px; --chipbar:54px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased;
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    background-image:
+      radial-gradient(900px 500px at 50% -120px, rgba(47,93,80,.08), transparent 70%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 20h40M20 0v40' stroke='%23b8945f' stroke-opacity='0.05' stroke-width='1'/%3E%3C/svg%3E");
+    background-attachment:fixed;}
+  .serif{font-family:"Georgia","Times New Roman",serif;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 clamp(16px,4vw,36px);}
+
+  /* HERO */
+  .hero{position:relative;overflow:hidden;background:var(--paper);border-bottom:1px solid var(--line);}
+  .hero img{width:100%;max-height:300px;object-fit:cover;object-position:center 44%;display:block;
+    filter:sepia(.16) contrast(1.02);
+    -webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 60%,transparent);}
+  .hero .cap{position:absolute;left:0;right:0;bottom:16px;text-align:center;}
+  .hero .eyebrow{font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:var(--gold-d);font-weight:700;}
+  .hero h1{font-weight:600;font-size:clamp(30px,6vw,46px);margin:4px 0 0;letter-spacing:.02em;}
+
+  /* TOPBAR */
+  .topbar{position:sticky;top:0;z-index:40;background:rgba(243,237,226,.95);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);}
+  .topbar .wrap{display:flex;align-items:center;gap:12px;min-height:var(--topbar);}
+  .back{border:none;background:none;font:inherit;font-size:15px;color:var(--sea);cursor:pointer;
+    display:none;align-items:center;gap:6px;font-weight:600;padding:6px 2px;}
+  .topbar .ttl{font-weight:600;font-size:19px;}
+  .sp{flex:1;}
+  .adminlink{font:inherit;font-size:13px;font-weight:700;color:var(--gold-d);text-decoration:none;
+    border:1.5px solid var(--gold);border-radius:999px;padding:7px 15px;white-space:nowrap;transition:.15s;}
+  .adminlink:hover{background:var(--gold);color:#fff;}
+
+  /* SECTION CARDS */
+  .lead{text-align:center;color:var(--soft);margin:24px auto 2px;font-size:15px;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin:24px 0 46px;}
+  .card{position:relative;border-radius:18px;overflow:hidden;cursor:pointer;min-height:260px;
+    display:flex;flex-direction:column;justify-content:flex-end;color:#fff;
+    box-shadow:0 10px 26px rgba(31,42,51,.14);transition:transform .2s,box-shadow .2s;}
+  .card:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(31,42,51,.22);}
+  .card .bg{position:absolute;inset:0;background-size:cover;background-position:center;transition:transform .5s;}
+  .card:hover .bg{transform:scale(1.06);}
+  .card .scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(16,22,26,.86) 6%,rgba(16,22,26,.25) 52%,rgba(16,22,26,.05));}
+  .card .in{position:relative;padding:20px 20px 22px;}
+  .card h3{font-weight:600;font-size:24px;margin:0;letter-spacing:.01em;text-shadow:0 2px 12px rgba(0,0,0,.4);}
+  .card .cnt{font-size:13px;opacity:.85;margin-top:3px;}
+  .card .go{display:inline-block;margin-top:14px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    border:1.5px solid rgba(255,255,255,.75);border-radius:999px;padding:8px 18px;}
+
+  /* SECTION TABS (быстрые переходы между разделами) */
+  .secbar{position:sticky;top:var(--topbar);z-index:35;background:rgba(32,39,43,.97);backdrop-filter:blur(8px);display:none;}
+  .secrow{display:flex;gap:8px;overflow-x:auto;padding:8px 16px;scrollbar-width:none;justify-content:center;min-height:var(--secbar);align-items:center;}
+  .secrow::-webkit-scrollbar{display:none;}
+  .sectab{white-space:nowrap;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.7);
+    background:transparent;border:1.5px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 14px;transition:.15s;}
+  .sectab:hover{color:#fff;border-color:rgba(255,255,255,.5);}
+  .sectab.on{background:var(--gold);border-color:var(--gold);color:#fff;}
+
+  /* CHIPS */
+  .chipsbar{position:sticky;top:calc(var(--topbar) + var(--secbar));z-index:30;background:rgba(243,237,226,.96);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);display:none;}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:11px 16px;scrollbar-width:none;justify-content:center;min-height:var(--chipbar);align-items:center;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{white-space:nowrap;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;
+    border:1.5px solid var(--line);background:var(--paper);color:var(--soft);border-radius:999px;padding:8px 15px;transition:.15s;}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+
+  /* DISHES */
+  .catblock{scroll-margin-top:calc(var(--topbar) + var(--secbar) + var(--chipbar) + 8px);}
+  .cathdr{text-align:center;margin:34px 0 14px;}
+  .cathdr .t{font-weight:600;font-size:26px;letter-spacing:.03em;}
+  .cathdr .r{width:46px;height:2px;background:var(--gold);margin:9px auto 0;border-radius:2px;}
+  .subhdr{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-d);margin:22px 0 6px;text-align:center;}
+  .dish{padding:15px 0;border-bottom:1px solid var(--line);}
+  .dish .l1{display:flex;align-items:baseline;gap:12px;}
+  .dish .nm{font-weight:600;font-size:17px;flex:1;}
+  .dish .pr{font-weight:700;font-size:16px;white-space:nowrap;}
+  .dish .pr .wt{color:var(--faint);font-weight:400;font-size:13.5px;margin-right:6px;}
+  .dish .ds{color:var(--soft);font-size:14px;margin-top:4px;max-width:72ch;}
+  .dish .ex{display:flex;flex-wrap:wrap;gap:7px 12px;align-items:center;margin-top:8px;font-size:12px;color:var(--faint);}
+  .tag{background:#efe7d8;color:var(--gold-d);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;}
+  .bju span{margin-right:9px;}
+  .empty{text-align:center;color:var(--faint);padding:60px 16px;}
+  .foot{text-align:center;color:var(--faint);font-size:12px;padding:34px 0 54px;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;
+    padding:11px 20px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:60;}
+  .toast.show{opacity:1;}
+  .hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<div class="hero" id="hero">
+  <img src="kam_hero.jpg" alt="">
+  <div class="cap"><div class="eyebrow">Ресторан</div><h1 class="serif">Тайны Камчатки</h1></div>
+</div>
+
+<div class="topbar">
+  <div class="wrap">
+    <button class="back" id="back" onclick="toLanding()">← Разделы</button>
+    <span class="ttl serif" id="ttl">Меню ресторана</span>
+    <span class="sp"></span>
+    <a class="adminlink" href="/admin" target="_blank">Админ-панель</a>
+  </div>
+</div>
+
+<div class="secbar" id="secbar"><div class="secrow" id="secrow"></div></div>
+<div class="chipsbar" id="chipsbar"><div class="chips" id="chips"></div></div>
+<div class="wrap" id="view"></div>
+<div class="foot" id="credit"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let DATA={groups:[]}, CUR=null, OBS=null, clickScroll=false;
+const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function toast(t,ms=2600){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),ms);}
+
+const IMG={'Основное меню':'sec_main.jpg','Меню завтраков':'sec_breakfast.jpg','Детское меню':'sec_kids.jpg','Винная карта':'sec_wine.jpg'};
+function imgFor(t){return IMG[t]||'sec_main.jpg';}
+
+async function loadData(){
+  try{DATA=await (await fetch('menu.json?t='+Date.now())).json();}catch(e){DATA={groups:[]};}
+  $('credit').textContent=`Тайны Камчатки · меню из R_Keeper · ${DATA.total||0} блюд · обновлено ${DATA.generated||'—'}`;
+}
+
+function toLanding(){
+  location.hash=''; $('hero').classList.remove('hidden');
+  $('chipsbar').style.display='none'; $('secbar').style.display='none'; $('back').style.display='none';
+  $('ttl').textContent='Меню ресторана';
+  const gs=DATA.groups||[];
+  let h='<p class="lead">Выберите раздел меню</p><div class="cards">';
+  if(!gs.length)h+='<p class="empty">Меню пустое</p>';
+  gs.forEach((g,i)=>{
+    const n=g.count||g.categories.reduce((a,c)=>a+c.items.length,0);
+    h+=`<div class="card" onclick="openSection(${i})">
+      <div class="bg" style="background-image:url('${imgFor(g.title)}')"></div><div class="scrim"></div>
+      <div class="in"><h3 class="serif">${esc(g.title)}</h3><div class="cnt">${n} блюд</div>
+      <span class="go">Посмотреть</span></div></div>`;
+  });
+  $('view').innerHTML=h+'</div>';
+  window.scrollTo(0,0);
+}
+
+// категории → чипсы (сворачиваем «A · B» в чип «A» с подзаголовками «B»)
+function sectionModel(group){
+  const chips=[], map={};
+  for(const c of group.categories){
+    const i=c.title.indexOf(' · '); const top=i<0?c.title:c.title.slice(0,i); const sub=i<0?null:c.title.slice(i+3);
+    if(!map[top]){map[top]={title:top,blocks:[]};chips.push(top);}
+    map[top].blocks.push({sub,items:c.items});
+  }
+  return {chips,map};
+}
+
+function openSection(i){
+  const g=(DATA.groups||[])[i]; if(!g){toast('Раздел не найден');return;}
+  ACT=-1; CUR=sectionModel(g);
+  location.hash='s'+i; $('hero').classList.add('hidden');
+  $('back').style.display='inline-flex'; $('ttl').textContent=g.title;
+  // панель разделов (быстрые переходы между Основное/Завтраки/Детское/Винная)
+  $('secbar').style.display='block';
+  $('secrow').innerHTML=(DATA.groups||[]).map((gg,k)=>`<button class="sectab${k===i?' on':''}" onclick="openSection(${k})">${esc(gg.title)}</button>`).join('');
+  $('chipsbar').style.display='block';
+  $('chips').innerHTML=CUR.chips.map((c,k)=>`<button class="chip${k===0?' on':''}" data-k="${k}" onclick="goCat(${k})">${esc(c)}</button>`).join('');
+  let h='';
+  CUR.chips.forEach((c,k)=>{
+    const m=CUR.map[c];
+    h+=`<div class="catblock" id="cat-${k}"><div class="cathdr"><div class="t serif">${esc(c)}</div><div class="r"></div></div>`;
+    for(const b of m.blocks){ if(b.sub)h+=`<div class="subhdr">${esc(b.sub)}</div>`; for(const it of b.items)h+=dish(it); }
+    h+='</div>';
+  });
+  $('view').innerHTML=h;
+  window.scrollTo(0,0); setActive(0);
+}
+
+function goCat(k){
+  clickScroll=true; setActive(k);
+  const el=$('cat-'+k); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>clickScroll=false,650);
+}
+let ACT=-1;
+function setActive(k){
+  if(k===ACT)return; ACT=k;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',+c.dataset.k===k));
+  const on=document.querySelector('.chip.on'); if(on)on.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+}
+// скролл-спай: активна последняя категория, чей верх ушёл под панель чипсов
+function onSpy(){
+  if(clickScroll)return;
+  const cb=$('chipsbar'); if(cb.style.display==='none')return;
+  const line=cb.getBoundingClientRect().bottom+6;
+  let k=0;
+  document.querySelectorAll('.catblock').forEach((b,i)=>{ if(b.getBoundingClientRect().top<=line) k=i; });
+  setActive(k);
+}
+window.addEventListener('scroll',onSpy,{passive:true});
+
+function dish(it){
+  const pr=it.price!=null?`${it.weight?`<span class="wt">${esc(it.weight)}</span>`:''}${it.price} ₽`:(it.weight?`<span class="wt">${esc(it.weight)}</span>`:'');
+  const bju=it.bju&&Object.keys(it.bju).length?`<span class="bju">${['kcal','bel','jir','ugl'].filter(k=>it.bju[k]).map(k=>`<span>${({kcal:'ккал',bel:'Б',jir:'Ж',ugl:'У'})[k]} ${esc(it.bju[k])}</span>`).join('')}</span>`:'';
+  const alg=(it.allergens||[]).map(a=>`<span class="tag">${esc(a)}</span>`).join('');
+  return `<div class="dish"><div class="l1"><div class="nm">${esc(it.name)}</div><div class="pr">${pr}</div></div>
+    ${it.desc?`<div class="ds">${esc(it.desc)}</div>`:''}${(bju||alg)?`<div class="ex">${bju}${alg}</div>`:''}</div>`;
+}
+
+(async()=>{await loadData();
+  const m=location.hash.match(/^#s(\d+)/);
+  if(m && (DATA.groups||[])[+m[1]]) openSection(+m[1]); else toLanding();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# данные и секреты клиента — в git НЕ храним (живут локально на их сервере)
+config.ini
+menu.json
+order.json
+order.json.tmp
+__pycache__/
+*.pyc
+*.tmp

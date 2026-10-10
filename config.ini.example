@@ -1,0 +1,6 @@
+; Скопируйте в config.ini и заполните. Этот файл в git НЕ попадает.
+[rkeeper]
+endpoint = https://IP:PORT/rk7api/v0/xmlinterface.xml
+user     = menu
+pass     = ПАРОЛЬ_РАБОТНИКА_RKEEPER
+admin_pw = ПАРОЛЬ_ДЛЯ_АДМИНКИ
