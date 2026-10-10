@@ -17,7 +17,7 @@ def _load():
     ini = os.path.join(HERE, 'config.ini')
     if os.path.isfile(ini):
         p = configparser.ConfigParser()
-        p.read(ini, encoding='utf-8')
+        p.read(ini, encoding='utf-8-sig')   # utf-8-sig: корректно ест BOM, если он есть
         if p.has_section('rkeeper'):
             for k, v in p['rkeeper'].items():
                 c[k.lower()] = v.strip()
