@@ -95,19 +95,24 @@
     root.querySelectorAll('.tk-card').forEach(function (el) { el.onclick = function () { section(+el.dataset.sec); }; });
   }
 
-  function section(i) {
+  function section(i, direct) {
     var g = (DATA.groups || [])[i]; if (!g) return;
     var m = model(g), cur = 0;
     function render() {
       var c = m.chips[cur];
-      var h = '<div class="tk-head"><button class="tk-back">← Разделы</button><span class="tk-ttl tk-serif">' + esc(g.title) + '</span></div>';
-      h += '<div class="tk-row">' + (DATA.groups || []).map(function (gg, k) { return '<button class="tk-sec' + (k === i ? ' tk-on' : '') + '" data-s="' + k + '">' + esc(gg.title) + '</button>'; }).join('') + '</div>';
+      var h = '';
+      if (!direct) {   // полный режим (лендинг с карточками): шапка + табы разделов
+        h += '<div class="tk-head"><button class="tk-back">← Разделы</button><span class="tk-ttl tk-serif">' + esc(g.title) + '</span></div>';
+        h += '<div class="tk-row">' + (DATA.groups || []).map(function (gg, k) { return '<button class="tk-sec' + (k === i ? ' tk-on' : '') + '" data-s="' + k + '">' + esc(gg.title) + '</button>'; }).join('') + '</div>';
+      }
       h += '<div class="tk-chips">' + m.chips.map(function (ch, k) { return '<button class="tk-chip' + (k === cur ? ' tk-on' : '') + '" data-c="' + k + '">' + esc(ch) + '</button>'; }).join('') + '</div>';
       h += '<div class="tk-cathdr"><div class="tk-t tk-serif">' + esc(c) + '</div><div class="tk-r"></div></div>';
       m.map[c].forEach(function (b) { if (b.sub) h += '<div class="tk-sub">' + esc(b.sub) + '</div>'; b.items.forEach(function (it) { h += dish(it); }); });
       root.innerHTML = h;
-      root.querySelector('.tk-back').onclick = landing;
-      root.querySelectorAll('.tk-sec').forEach(function (el) { el.onclick = function () { section(+el.dataset.s); }; });
+      if (!direct) {
+        root.querySelector('.tk-back').onclick = landing;
+        root.querySelectorAll('.tk-sec').forEach(function (el) { el.onclick = function () { section(+el.dataset.s); }; });
+      }
       root.querySelectorAll('.tk-chip').forEach(function (el) { el.onclick = function () { cur = +el.dataset.c; render(); root.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
     }
     render();
@@ -116,6 +121,15 @@
   root.innerHTML = '<div class="tk-empty">Загрузка меню…</div>';
   load(function (ok) {
     if (!ok) { root.innerHTML = '<div class="tk-empty">Не удалось загрузить меню. Обновите страницу.</div>'; return; }
-    landing();
+    // режим одного раздела: <div id="tk-menu" data-section="Основное меню"></div>
+    var want = (root.getAttribute('data-section') || (window.TK_SECTION || '')).trim();
+    if (want) {
+      var idx = -1;
+      (DATA.groups || []).forEach(function (g, k) { if (g.title === want) idx = k; });
+      if (idx >= 0) section(idx, true);
+      else root.innerHTML = '<div class="tk-empty">Раздел «' + esc(want) + '» пока не заполнен.</div>';
+    } else {
+      landing();   // полный режим: карточки всех разделов
+    }
   });
 })();
