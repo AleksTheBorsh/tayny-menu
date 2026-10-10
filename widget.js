@@ -60,6 +60,10 @@
   #tk-menu .tk-ex{display:flex;flex-wrap:wrap;gap:7px 10px;margin-top:8px;font-size:12px;color:var(--tk-faint);}
   #tk-menu .tk-tag{background:#efe7d8;color:var(--tk-gold-d);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;}
   #tk-menu .tk-empty{text-align:center;color:var(--tk-faint);padding:40px 10px;}
+  #tk-menu .tk-pdfbar{display:flex;justify-content:flex-end;margin:0 0 10px;}
+  #tk-menu .tk-pdf{cursor:pointer;font-size:13px;font-weight:700;border:1.5px solid var(--tk-navy);background:#fff;color:var(--tk-navy);border-radius:999px;padding:8px 16px;display:inline-flex;align-items:center;gap:6px;transition:.15s;}
+  #tk-menu .tk-pdf:hover{background:var(--tk-navy);color:#fff;}
+  #tk-menu .tk-pdf:disabled{opacity:.5;cursor:default;}
   `;
   var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
@@ -67,6 +71,56 @@
   var esc = function (s) { return (s || '').replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); };
   var IMG = { 'Основное меню': 'sec_main.jpg', 'Меню завтраков': 'sec_breakfast.jpg', 'Детское меню': 'sec_kids.jpg', 'Винная карта': 'sec_wine.jpg' };
   var imgFor = function (t) { return IMGBASE + '/' + (IMG[t] || 'sec_main.jpg'); };
+
+  // ——— PDF для гостей (pdfmake подгружается лениво, только при клике) ———
+  function pdfName(t) { return 'menu-' + (t || '').replace(/[^0-9A-Za-zА-Яа-яЁё]+/g, '_') + '.pdf'; }
+  function ensurePdf(ok, fail) {
+    if (window.pdfMake && window.pdfMake.vfs) { ok(); return; }
+    var b = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/';
+    var s1 = document.createElement('script'); s1.src = b + 'pdfmake.min.js';
+    s1.onload = function () { var s2 = document.createElement('script'); s2.src = b + 'vfs_fonts.js'; s2.onload = ok; s2.onerror = fail; document.head.appendChild(s2); };
+    s1.onerror = fail; document.head.appendChild(s1);
+  }
+  function pdfBody(groups) {
+    var navy = '#1b2a52', gold = '#9c7a46', soft = '#5d6b74', faint = '#9aa4ab', line = '#e5ddcd', c = [];
+    groups.forEach(function (g, gi) {
+      if (gi > 0) c.push({ text: '', pageBreak: 'before' });
+      c.push({ text: g.title, fontSize: 24, bold: true, color: navy, margin: [0, 0, 0, 3] });
+      c.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 64, y2: 0, lineWidth: 2, lineColor: gold }], margin: [0, 0, 0, 12] });
+      (g.categories || []).forEach(function (cat) {
+        if (cat.title && cat.title !== g.title) c.push({ text: (cat.title || '').toUpperCase(), fontSize: 11, bold: true, color: gold, margin: [0, 12, 0, 4] });
+        (cat.items || []).forEach(function (it) {
+          var wt = it.weight ? it.weight + '   ' : '', price = (it.price != null ? it.price + ' ₽' : '');
+          c.push({ columns: [{ text: it.name || '', width: '*', fontSize: 12.5, bold: true, color: navy }, { text: wt + price, width: 'auto', fontSize: 12.5, bold: true, color: navy, alignment: 'right' }], margin: [0, 7, 0, 0] });
+          if (it.desc) c.push({ text: it.desc, fontSize: 9.5, color: soft, margin: [0, 2, 0, 0] });
+          var bj = it.bju || {}, ex = [];
+          if (bj.kcal) ex.push(bj.kcal + ' ккал'); if (bj.bel) ex.push('Б ' + bj.bel); if (bj.jir) ex.push('Ж ' + bj.jir); if (bj.ugl) ex.push('У ' + bj.ugl);
+          var ln = ex.join(' · '); if (it.allergens && it.allergens.length) ln += (ln ? '      ' : '') + 'Аллергены: ' + it.allergens.join(', ');
+          if (ln) c.push({ text: ln, fontSize: 8, color: faint, margin: [0, 2, 0, 0] });
+          c.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: .5, lineColor: line }], margin: [0, 7, 0, 0] });
+        });
+      });
+    });
+    return c;
+  }
+  function makePdf(groups, fname) {
+    var dd = {
+      pageSize: 'A4', pageMargins: [42, 50, 42, 46],
+      background: function () { return { canvas: [{ type: 'rect', x: 0, y: 0, w: 595.28, h: 841.89, color: '#fbf8f1' }] }; },
+      content: pdfBody(groups),
+      footer: function (cur, tot) { return { text: 'Тайны Камчатки   ·   ' + cur + ' / ' + tot, fontSize: 8, color: '#9aa4ab', alignment: 'center', margin: [0, 8, 0, 0] }; },
+      defaultStyle: { font: 'Roboto' }
+    };
+    pdfMake.createPdf(dd).download(fname);
+  }
+  function wirePdf(groups, fname) {
+    var pbtn = root.querySelector('.tk-pdf'); if (!pbtn) return;
+    pbtn.onclick = function () {
+      var o = pbtn.innerHTML; pbtn.disabled = true; pbtn.innerHTML = 'Готовлю PDF…';
+      ensurePdf(function () { try { makePdf(groups, fname); } catch (e) {} pbtn.disabled = false; pbtn.innerHTML = o; },
+                function () { pbtn.disabled = false; pbtn.innerHTML = o; alert('Не удалось сформировать PDF (нет связи с CDN).'); });
+    };
+  }
 
   function load(cb) {
     var n = 0;
@@ -98,7 +152,7 @@
   }
 
   function landing() {
-    var h = '<div class="tk-cards">';
+    var h = '<div class="tk-pdfbar"><button class="tk-pdf" type="button">⤓ Скачать всё меню (PDF)</button></div><div class="tk-cards">';
     (DATA.groups || []).forEach(function (g, i) {
       var n = g.count || g.categories.reduce(function (a, c) { return a + c.items.length; }, 0);
       h += '<div class="tk-card" data-sec="' + i + '"><div class="tk-bg" style="background-image:url(\'' + imgFor(g.title) + '\')"></div><div class="tk-scrim"></div>' +
@@ -106,6 +160,7 @@
     });
     root.innerHTML = h + '</div>';
     root.querySelectorAll('.tk-card').forEach(function (el) { el.onclick = function () { section(+el.dataset.sec); }; });
+    wirePdf(DATA.groups || [], 'menu-tayny-kamchatki.pdf');
   }
 
   function section(i, direct) {
@@ -118,6 +173,7 @@
         h += '<div class="tk-head"><button class="tk-back">← Разделы</button><span class="tk-ttl tk-serif">' + esc(g.title) + '</span></div>';
         h += '<div class="tk-row">' + (DATA.groups || []).map(function (gg, k) { return '<button class="tk-sec' + (k === i ? ' tk-on' : '') + '" data-s="' + k + '">' + esc(gg.title) + '</button>'; }).join('') + '</div>';
       }
+      h += '<div class="tk-pdfbar"><button class="tk-pdf" type="button">⤓ Скачать PDF</button></div>';
       if (m.chips.length > 1)   // переключатель папок нужен только когда папок больше одной
         h += '<div class="tk-chips">' + m.chips.map(function (ch, k) { return '<button class="tk-chip' + (k === cur ? ' tk-on' : '') + '" data-c="' + k + '">' + esc(ch) + '</button>'; }).join('') + '</div>';
       h += '<div class="tk-cathdr"><div class="tk-t tk-serif">' + esc(c) + '</div><div class="tk-r"></div></div>';
@@ -128,6 +184,7 @@
         root.querySelectorAll('.tk-sec').forEach(function (el) { el.onclick = function () { section(+el.dataset.s); }; });
       }
       root.querySelectorAll('.tk-chip').forEach(function (el) { el.onclick = function () { cur = +el.dataset.c; render(); root.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
+      wirePdf([g], pdfName(g.title));   // кнопка «Скачать PDF» — весь раздел целиком
     }
     render();
   }
