@@ -81,6 +81,16 @@
     s1.onload = function () { var s2 = document.createElement('script'); s2.src = b + 'vfs_fonts.js'; s2.onload = ok; s2.onerror = fail; document.head.appendChild(s2); };
     s1.onerror = fail; document.head.appendChild(s1);
   }
+  var _logo;   // эмблема для шапки PDF (прозрачный PNG с CDN), тянем один раз
+  function getLogo(cb) {
+    if (_logo !== undefined) { cb(_logo); return; }
+    fetch(IMGBASE + '/logo.png').then(function (r) { return r.ok ? r.blob() : Promise.reject(); }).then(function (b) {
+      var fr = new FileReader();
+      fr.onload = function () { _logo = fr.result; cb(_logo); };
+      fr.onerror = function () { _logo = ''; cb(''); };
+      fr.readAsDataURL(b);
+    }).catch(function () { _logo = ''; cb(''); });
+  }
   function pdfBody(groups) {
     var navy = '#1b2a52', gold = '#9c7a46', soft = '#5d6b74', faint = '#9aa4ab', line = '#e5ddcd', c = [];
     groups.forEach(function (g, gi) {
@@ -103,12 +113,21 @@
     });
     return c;
   }
-  function makePdf(groups, fname) {
+  function makePdf(groups, fname, logo) {
+    var gold = '#9c7a46', soft = '#5d6b74', faint = '#9aa4ab';
+    var content = pdfBody(groups);
+    if (logo) content.unshift({ image: logo, width: 150, alignment: 'center', margin: [0, 0, 0, 16] });
+    // реквизиты мелким шрифтом внизу
+    content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: .8, lineColor: gold }], margin: [0, 16, 0, 8] });
+    content.push({ text: 'Цены актуальны на ' + new Date().toLocaleDateString('ru-RU'), fontSize: 8, color: soft, alignment: 'center', margin: [0, 0, 0, 5] });
+    content.push({ text: 'ООО «Камчатские тайны», ИНН 4100044714', fontSize: 7.5, color: faint, alignment: 'center' });
+    content.push({ text: 'Ресторан «Тайны Камчатки» · Камчатский край, п. Паратунка, ул. Елизова, 6а', fontSize: 7.5, color: faint, alignment: 'center', margin: [0, 2, 0, 0] });
+    content.push({ text: 'info@mysterykamchatka.com     ·     +7 914 999 88 99', fontSize: 7.5, color: faint, alignment: 'center', margin: [0, 2, 0, 0] });
     var dd = {
       pageSize: 'A4', pageMargins: [42, 50, 42, 46],
       background: function () { return { canvas: [{ type: 'rect', x: 0, y: 0, w: 595.28, h: 841.89, color: '#fbf8f1' }] }; },
-      content: pdfBody(groups),
-      footer: function (cur, tot) { return { text: 'Тайны Камчатки   ·   ' + cur + ' / ' + tot, fontSize: 8, color: '#9aa4ab', alignment: 'center', margin: [0, 8, 0, 0] }; },
+      content: content,
+      footer: function (cur, tot) { return { text: cur + ' / ' + tot, fontSize: 8, color: '#b9b2a6', alignment: 'center', margin: [0, 8, 0, 0] }; },
       defaultStyle: { font: 'Roboto' }
     };
     pdfMake.createPdf(dd).download(fname);
@@ -117,7 +136,7 @@
     var pbtn = root.querySelector('.tk-pdf'); if (!pbtn) return;
     pbtn.onclick = function () {
       var o = pbtn.innerHTML; pbtn.disabled = true; pbtn.innerHTML = 'Готовлю PDF…';
-      ensurePdf(function () { try { makePdf(groups, fname); } catch (e) {} pbtn.disabled = false; pbtn.innerHTML = o; },
+      ensurePdf(function () { getLogo(function (logo) { try { makePdf(groups, fname, logo); } catch (e) {} pbtn.disabled = false; pbtn.innerHTML = o; }); },
                 function () { pbtn.disabled = false; pbtn.innerHTML = o; alert('Не удалось сформировать PDF (нет связи с CDN).'); });
     };
   }

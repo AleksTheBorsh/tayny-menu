@@ -180,10 +180,21 @@ async function genPdf(gi,e){
       content.push({canvas:[{type:'line',x1:0,y1:0,x2:515,y2:0,lineWidth:.5,lineColor:line}],margin:[0,7,0,0]});
     });
   });
+  // эмблема в шапку (прозрачный PNG, отдаётся этим же сервером)
+  let logo='';
+  try{ const lb=await (await fetch('logo.png')).blob();
+       logo=await new Promise(function(res){const fr=new FileReader();fr.onload=function(){res(fr.result);};fr.onerror=function(){res('');};fr.readAsDataURL(lb);}); }catch(_){}
+  if(logo) content.unshift({image:logo,width:150,alignment:'center',margin:[0,0,0,16]});
+  // реквизиты мелким шрифтом внизу
+  content.push({canvas:[{type:'line',x1:0,y1:0,x2:515,y2:0,lineWidth:.8,lineColor:gold}],margin:[0,16,0,8]});
+  content.push({text:'Цены актуальны на '+new Date().toLocaleDateString('ru-RU'),fontSize:8,color:soft,alignment:'center',margin:[0,0,0,5]});
+  content.push({text:'ООО «Камчатские тайны», ИНН 4100044714',fontSize:7.5,color:faint,alignment:'center'});
+  content.push({text:'Ресторан «Тайны Камчатки» · Камчатский край, п. Паратунка, ул. Елизова, 6а',fontSize:7.5,color:faint,alignment:'center',margin:[0,2,0,0]});
+  content.push({text:'info@mysterykamchatka.com     ·     +7 914 999 88 99',fontSize:7.5,color:faint,alignment:'center',margin:[0,2,0,0]});
   const dd={pageSize:'A4',pageMargins:[42,50,42,46],
     background:function(){return {canvas:[{type:'rect',x:0,y:0,w:595.28,h:841.89,color:cream}]};},
     content:content,
-    footer:function(cur,tot){return {text:'Тайны Камчатки   ·   '+new Date().toLocaleDateString('ru-RU')+'   ·   '+cur+' / '+tot,fontSize:8,color:faint,alignment:'center',margin:[0,8,0,0]};},
+    footer:function(cur,tot){return {text:cur+' / '+tot,fontSize:8,color:'#b9b2a6',alignment:'center',margin:[0,8,0,0]};},
     defaultStyle:{font:'Roboto'}};
   const fn='menu-'+(g.title||'').replace(/[^0-9A-Za-zА-Яа-яЁё]+/g,'_')+'.pdf';
   pdfMake.createPdf(dd).download(fn);

@@ -33,7 +33,7 @@ LIVE = (CFG.get('live_dir') or os.environ.get('TAYNY_LIVE_DIR')
         or os.path.join(os.path.dirname(HERE), 'tayny-live'))
 TOKEN = CFG.get('gh_token') or os.environ.get('GH_TOKEN') or ''
 REPO = 'github.com/AleksTheBorsh/tayny-live.git'
-ASSETS = ['widget.js', 'sec_main.jpg', 'sec_breakfast.jpg', 'sec_kids.jpg', 'sec_wine.jpg', 'kam_hero.jpg']
+ASSETS = ['widget.js', 'logo.png', 'sec_main.jpg', 'sec_breakfast.jpg', 'sec_kids.jpg', 'sec_wine.jpg', 'kam_hero.jpg']
 SEP = '\u0001'
 
 
