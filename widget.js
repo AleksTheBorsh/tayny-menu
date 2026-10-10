@@ -1,14 +1,20 @@
 /* Виджет меню «Тайны Камчатки» для вставки в Tilda (блок «T123 / HTML-код»).
-   Рендерит меню прямо в странице (не iframe). Данные тянет с того же хоста, откуда загружен widget.js.
-   Вставка в Tilda:
-     <div id="tk-menu"></div>
-     <script src="https://ВАШ-АДРЕС/widget.js" defer></script>
+   Рендерит меню прямо в странице (не iframe). Данные (menu.json) берёт из публичного
+   репозитория tayny-live через GitHub CDN — свой сервер/туннель НЕ нужен.
+   Обычная вставка (одна строка со скриптом):
+     <div id="tk-menu" data-section="Основное меню"></div>
+     <script src="https://cdn.jsdelivr.net/gh/AleksTheBorsh/tayny-live@main/widget.js" defer></script>
+   data-section — какой раздел показать на этой странице (без него — карточки всех разделов).
+   data-base (необязательно) — переопределить источник данных (menu.json + фото).
 */
 (function () {
   var S = document.currentScript || document.querySelector('script[src*="widget.js"]');
-  var BASE = S ? S.src.replace(/\/widget\.js.*$/, '') : '';
+  var SB = S ? S.src.replace(/\/widget\.js.*$/, '') : '';   // откуда загружен скрипт (для фото)
   var root = document.getElementById('tk-menu');
   if (!root) { root = document.createElement('div'); root.id = 'tk-menu'; (S && S.parentNode ? S.parentNode : document.body).insertBefore(root, S); }
+  // menu.json — всегда со «свежего» raw (CORS:*, cache-busting ?t=); фото — с того же CDN, что и скрипт
+  var DATA = (root.getAttribute('data-base') || 'https://raw.githubusercontent.com/AleksTheBorsh/tayny-live/main').replace(/\/$/, '');
+  var IMGBASE = SB || 'https://cdn.jsdelivr.net/gh/AleksTheBorsh/tayny-live@main';
 
   var CSS = `
   #tk-menu{--tk-ink:#20272b;--tk-soft:#5d6b74;--tk-faint:#9aa4ab;--tk-line:#e5ddcd;--tk-gold:#b8945f;--tk-gold-d:#9c7a46;--tk-sea:#2f5d50;--tk-paper:#fbf8f1;
@@ -53,12 +59,12 @@
   var DATA = { groups: [] };
   var esc = function (s) { return (s || '').replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); };
   var IMG = { 'Основное меню': 'sec_main.jpg', 'Меню завтраков': 'sec_breakfast.jpg', 'Детское меню': 'sec_kids.jpg', 'Винная карта': 'sec_wine.jpg' };
-  var imgFor = function (t) { return BASE + '/' + (IMG[t] || 'sec_main.jpg'); };
+  var imgFor = function (t) { return IMGBASE + '/' + (IMG[t] || 'sec_main.jpg'); };
 
   function load(cb) {
     var n = 0;
     (function attempt() {
-      fetch(BASE + '/menu.json?t=' + Date.now(), { cache: 'no-store' })
+      fetch(DATA + '/menu.json?t=' + Date.now(), { cache: 'no-store' })
         .then(function (r) { if (!r.ok) throw 0; return r.json(); })
         .then(function (d) { DATA = d; cb(true); })
         .catch(function () { if (++n < 5) setTimeout(attempt, 700); else cb(false); });

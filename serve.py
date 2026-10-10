@@ -115,6 +115,20 @@ class H(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps({'ok': True, 'total': total}), 'application/json')
             except subprocess.TimeoutExpired:
                 return self._send(504, '{"ok":false,"error":"timeout"}', 'application/json')
+        if p == '/api/publish':
+            try:
+                r = subprocess.run([sys.executable, os.path.join(HERE, 'publish.py')],
+                                   capture_output=True, timeout=180, cwd=HERE)
+                last = (r.stdout or b'').decode('utf-8', 'replace').strip().splitlines()
+                try:
+                    j = json.loads(last[-1]) if last else {}
+                except Exception:
+                    j = {}
+                if not j:
+                    j = {'ok': r.returncode == 0, 'error': (r.stderr or b'').decode('utf-8', 'replace')[-400:]}
+                return self._send(200 if j.get('ok') else 500, json.dumps(j, ensure_ascii=False), 'application/json; charset=utf-8')
+            except subprocess.TimeoutExpired:
+                return self._send(504, '{"ok":false,"error":"timeout"}', 'application/json')
         return self._send(404, 'not found', 'text/plain')
 
 
