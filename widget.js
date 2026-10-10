@@ -15,10 +15,12 @@
   // menu.json — всегда со «свежего» raw (CORS:*, cache-busting ?t=); фото — с того же CDN, что и скрипт
   var SRC = (root.getAttribute('data-base') || 'https://raw.githubusercontent.com/AleksTheBorsh/tayny-live/main').replace(/\/$/, '');
   var IMGBASE = SB || 'https://cdn.jsdelivr.net/gh/AleksTheBorsh/tayny-live@main';
+  // отступ сверху, чтобы меню не уходило под их «прозрачную» шапку (подстраивается data-top="...")
+  root.style.paddingTop = (parseInt(root.getAttribute('data-top') || '90', 10) || 0) + 'px';
 
   var CSS = `
-  #tk-menu{--tk-ink:#20272b;--tk-soft:#5d6b74;--tk-faint:#9aa4ab;--tk-line:#e5ddcd;--tk-gold:#b8945f;--tk-gold-d:#9c7a46;--tk-sea:#2f5d50;--tk-paper:#fbf8f1;
-    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--tk-ink);line-height:1.55;max-width:900px;margin:0 auto;}
+  #tk-menu{--tk-ink:#20272b;--tk-soft:#5d6b74;--tk-faint:#9aa4ab;--tk-line:#e8e0d0;--tk-gold:#b8945f;--tk-gold-d:#9c7a46;--tk-sea:#1b2a52;--tk-navy:#1b2a52;--tk-paper:#fbf8f1;
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--tk-ink);line-height:1.55;max-width:900px;margin:0 auto;background:var(--tk-paper);padding:0 clamp(16px,4vw,30px) 26px;border-radius:14px;}
   #tk-menu *{box-sizing:border-box;}
   #tk-menu .tk-serif{font-family:"Georgia","Times New Roman",serif;}
   #tk-menu .tk-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;}
@@ -39,15 +41,15 @@
   #tk-menu .tk-sec.tk-on{background:var(--tk-sea);border-color:var(--tk-sea);color:#fff;}
   #tk-menu .tk-chips{display:flex;gap:8px;overflow-x:auto;padding:8px 0 4px;justify-content:center;flex-wrap:wrap;}
   #tk-menu .tk-chip{white-space:nowrap;cursor:pointer;font-size:13.5px;font-weight:600;border:1.5px solid var(--tk-line);background:#fff;color:var(--tk-soft);border-radius:999px;padding:8px 15px;}
-  #tk-menu .tk-chip.tk-on{background:var(--tk-ink);border-color:var(--tk-ink);color:#fff;}
+  #tk-menu .tk-chip.tk-on{background:var(--tk-navy);border-color:var(--tk-navy);color:#fff;}
   #tk-menu .tk-cathdr{text-align:center;margin:24px 0 12px;}
-  #tk-menu .tk-cathdr .tk-t{font-weight:600;font-size:25px;}
+  #tk-menu .tk-cathdr .tk-t{font-weight:600;font-size:25px;color:var(--tk-navy);}
   #tk-menu .tk-cathdr .tk-r{width:44px;height:2px;background:var(--tk-gold);margin:8px auto 0;border-radius:2px;}
   #tk-menu .tk-sub{font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--tk-gold-d);margin:18px 0 6px;text-align:center;}
   #tk-menu .tk-dish{padding:14px 0;border-bottom:1px solid var(--tk-line);}
   #tk-menu .tk-l1{display:flex;align-items:baseline;gap:12px;}
   #tk-menu .tk-nm{font-weight:600;font-size:17px;flex:1;}
-  #tk-menu .tk-pr{font-weight:700;font-size:16px;white-space:nowrap;}
+  #tk-menu .tk-pr{font-weight:700;font-size:16px;white-space:nowrap;color:var(--tk-navy);}
   #tk-menu .tk-pr .tk-wt{color:var(--tk-faint);font-weight:400;font-size:13.5px;margin-right:6px;}
   #tk-menu .tk-ds{color:var(--tk-soft);font-size:14px;margin-top:4px;}
   #tk-menu .tk-ex{display:flex;flex-wrap:wrap;gap:7px 10px;margin-top:8px;font-size:12px;color:var(--tk-faint);}
@@ -111,7 +113,8 @@
         h += '<div class="tk-head"><button class="tk-back">← Разделы</button><span class="tk-ttl tk-serif">' + esc(g.title) + '</span></div>';
         h += '<div class="tk-row">' + (DATA.groups || []).map(function (gg, k) { return '<button class="tk-sec' + (k === i ? ' tk-on' : '') + '" data-s="' + k + '">' + esc(gg.title) + '</button>'; }).join('') + '</div>';
       }
-      h += '<div class="tk-chips">' + m.chips.map(function (ch, k) { return '<button class="tk-chip' + (k === cur ? ' tk-on' : '') + '" data-c="' + k + '">' + esc(ch) + '</button>'; }).join('') + '</div>';
+      if (m.chips.length > 1)   // переключатель папок нужен только когда папок больше одной
+        h += '<div class="tk-chips">' + m.chips.map(function (ch, k) { return '<button class="tk-chip' + (k === cur ? ' tk-on' : '') + '" data-c="' + k + '">' + esc(ch) + '</button>'; }).join('') + '</div>';
       h += '<div class="tk-cathdr"><div class="tk-t tk-serif">' + esc(c) + '</div><div class="tk-r"></div></div>';
       m.map[c].forEach(function (b) { if (b.sub) h += '<div class="tk-sub">' + esc(b.sub) + '</div>'; b.items.forEach(function (it) { h += dish(it); }); });
       root.innerHTML = h;
