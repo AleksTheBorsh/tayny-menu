@@ -15,12 +15,17 @@
   // menu.json — всегда со «свежего» raw (CORS:*, cache-busting ?t=); фото — с того же CDN, что и скрипт
   var SRC = (root.getAttribute('data-base') || 'https://raw.githubusercontent.com/AleksTheBorsh/tayny-live/main').replace(/\/$/, '');
   var IMGBASE = SB || 'https://cdn.jsdelivr.net/gh/AleksTheBorsh/tayny-live@main';
-  // отступ сверху, чтобы меню не уходило под их «прозрачную» шапку (подстраивается data-top="...")
-  root.style.paddingTop = (parseInt(root.getAttribute('data-top') || '90', 10) || 0) + 'px';
+  // фон всей страницы — «вулканический песок» (тёмно-серый), чтобы их белая шапка читалась.
+  // цвет меняется через data-bg="#......", отключить покраску — data-bg=""
+  var PBG = root.getAttribute('data-bg'); if (PBG === null) PBG = '#615d56';
+  if (PBG) { var pbs = document.createElement('style'); pbs.textContent = 'html,body{background:' + PBG + ' !important;}#allrecords{background:' + PBG + ' !important;}'; document.head.appendChild(pbs); }
+  // меню — светлая «бумажная» карточка ниже их шапки; высоту отступа крутить через data-top="..."
+  root.style.marginTop = (parseInt(root.getAttribute('data-top') || '150', 10) || 0) + 'px';
+  root.style.marginBottom = '48px';
 
   var CSS = `
   #tk-menu{--tk-ink:#20272b;--tk-soft:#5d6b74;--tk-faint:#9aa4ab;--tk-line:#e8e0d0;--tk-gold:#b8945f;--tk-gold-d:#9c7a46;--tk-sea:#1b2a52;--tk-navy:#1b2a52;--tk-paper:#fbf8f1;
-    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--tk-ink);line-height:1.55;max-width:900px;margin:0 auto;background:var(--tk-paper);padding:0 clamp(16px,4vw,30px) 26px;border-radius:14px;}
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--tk-ink);line-height:1.55;max-width:900px;margin:0 auto;background:var(--tk-paper);padding:clamp(22px,4vw,34px) clamp(16px,4vw,30px);border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,.28);}
   #tk-menu *{box-sizing:border-box;}
   #tk-menu .tk-serif{font-family:"Georgia","Times New Roman",serif;}
   #tk-menu .tk-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;}
