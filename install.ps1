@@ -48,7 +48,7 @@ Start-ScheduledTask -TaskName "TaynyMenu"
 Say "Авто-обновление из git (TaynyMenuUpdate, каждые 10 мин)"
 $a2 = New-ScheduledTaskAction -Execute (Join-Path $Dir "update.bat") -WorkingDirectory $Dir
 $t2 = New-ScheduledTaskTrigger -Once -At (Get-Date) `
-        -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration ([TimeSpan]::MaxValue)
+        -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration (New-TimeSpan -Days 3650)
 Register-ScheduledTask -TaskName "TaynyMenuUpdate" -Action $a2 -Trigger $t2 -Settings $set `
   -RunLevel Highest -User "SYSTEM" -Force | Out-Null
 
