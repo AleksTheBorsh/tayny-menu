@@ -13,7 +13,7 @@
   var root = document.getElementById('tk-menu');
   if (!root) { root = document.createElement('div'); root.id = 'tk-menu'; (S && S.parentNode ? S.parentNode : document.body).insertBefore(root, S); }
   // menu.json — всегда со «свежего» raw (CORS:*, cache-busting ?t=); фото — с того же CDN, что и скрипт
-  var DATA = (root.getAttribute('data-base') || 'https://raw.githubusercontent.com/AleksTheBorsh/tayny-live/main').replace(/\/$/, '');
+  var SRC = (root.getAttribute('data-base') || 'https://raw.githubusercontent.com/AleksTheBorsh/tayny-live/main').replace(/\/$/, '');
   var IMGBASE = SB || 'https://cdn.jsdelivr.net/gh/AleksTheBorsh/tayny-live@main';
 
   var CSS = `
@@ -64,7 +64,7 @@
   function load(cb) {
     var n = 0;
     (function attempt() {
-      fetch(DATA + '/menu.json?t=' + Date.now(), { cache: 'no-store' })
+      fetch(SRC + '/menu.json?t=' + Date.now(), { cache: 'no-store' })
         .then(function (r) { if (!r.ok) throw 0; return r.json(); })
         .then(function (d) { DATA = d; cb(true); })
         .catch(function () { if (++n < 5) setTimeout(attempt, 700); else cb(false); });
