@@ -22,7 +22,8 @@ def _load():
             for k, v in p['rkeeper'].items():
                 c[k.lower()] = v.strip()
     env = {'endpoint': os.environ.get('RK_ENDPOINT'), 'user': os.environ.get('RK_USER'),
-           'pass': os.environ.get('RK_PASS'), 'admin_pw': os.environ.get('ADMIN_PW')}
+           'pass': os.environ.get('RK_PASS'), 'admin_pw': os.environ.get('ADMIN_PW'),
+           'live_dir': os.environ.get('TAYNY_LIVE_DIR'), 'gh_token': os.environ.get('GH_TOKEN')}
     for k, v in env.items():
         if v and not c.get(k):
             c[k] = v.strip()
@@ -38,6 +39,8 @@ def _load():
         'user': c.get('user', ''),
         'pass': c.get('pass', ''),
         'admin_pw': c.get('admin_pw') or '134597',
+        'live_dir': c.get('live_dir', ''),   # куда публиковать (рабочая копия tayny-live)
+        'gh_token': c.get('gh_token', ''),   # PAT для push с клиентского бокса (HTTPS)
     }
 
 

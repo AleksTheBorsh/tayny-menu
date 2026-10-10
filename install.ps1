@@ -11,6 +11,7 @@ param(
   [string]$RkUser   = "menu",
   [Parameter(Mandatory=$true)][string]$RkPass,
   [string]$AdminPw  = "134597",
+  [string]$LiveToken = "",
   [int]   $Port     = 8913
 )
 $ErrorActionPreference = "Stop"
@@ -25,6 +26,7 @@ if (Test-Path (Join-Path $Dir ".git")) { git -C $Dir pull --quiet } else { git c
 
 Say "Write config.ini (no BOM)"
 $cfg = "[rkeeper]`r`nendpoint = $Endpoint`r`nuser     = $RkUser`r`npass     = $RkPass`r`nadmin_pw = $AdminPw`r`n"
+if ($LiveToken -ne "") { $cfg += "gh_token = $LiveToken`r`n" }   # push menu to CDN repo from this box
 [System.IO.File]::WriteAllText((Join-Path $Dir "config.ini"), $cfg, (New-Object System.Text.UTF8Encoding($false)))
 
 Say "First menu pull from R_Keeper"

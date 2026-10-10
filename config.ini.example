@@ -4,3 +4,12 @@ endpoint = https://IP:PORT/rk7api/v0/xmlinterface.xml
 user     = menu
 pass     = ПАРОЛЬ_РАБОТНИКА_RKEEPER
 admin_pw = ПАРОЛЬ_ДЛЯ_АДМИНКИ
+
+; --- публикация меню на сайт (кнопка «Выгрузить на сайт») ---
+; gh_token: GitHub fine-grained PAT с правом Contents: Read and write ТОЛЬКО на репо
+;   AleksTheBorsh/tayny-live. Нужен, чтобы пушить меню на CDN по HTTPS с этого бокса.
+;   Без него публикация работает только там, где настроен ssh-доступ к GitHub (наш бокс).
+; live_dir: куда класть рабочую копию tayny-live (по умолчанию — папка «tayny-live»
+;   рядом с кодом; publish.py сам её клонирует). Обычно задавать не нужно.
+gh_token = github_pat_...
+;live_dir = C:\tayny-live
