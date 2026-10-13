@@ -95,6 +95,42 @@ def push():
     return git('push', 'origin', 'HEAD')   # ssh-origin (наш бокс)
 
 
+def sync():
+    """Подтянуть удалённое состояние, чтобы push всегда был fast-forward.
+    В tayny-live пишем и мы со своего бокса, и клиент со своего, поэтому перед
+    каждой публикацией приводим рабочую копию к origin (локальные правки не нужны —
+    menu.json и ассеты всё равно перезаписываются ниже)."""
+    git('fetch', 'origin')
+    git('reset', '--hard', 'origin/main')
+    git('clean', '-fd')
+
+
+def write_payload(menu):
+    json.dump(menu, open(os.path.join(LIVE, 'menu.json'), 'w', encoding='utf-8'),
+              ensure_ascii=False, separators=(',', ':'))
+    for a in ASSETS:                      # ассеты шлём, если их ещё нет или изменились
+        src = os.path.join(HERE, a)
+        if os.path.isfile(src):
+            shutil.copy2(src, os.path.join(LIVE, a))
+
+
+def attempt(menu):
+    """Один заход: синк → запись → коммит → push. Возвращает (ok, changed, error)."""
+    sync()
+    write_payload(menu)
+    git('add', '-A')
+    if not git('status', '--porcelain').stdout.strip():
+        return True, False, ''
+    stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    c = git('commit', '-m', 'menu %s · %d блюд' % (stamp, menu.get('total', 0)))
+    if c.returncode != 0 and 'nothing to commit' not in (c.stdout + c.stderr):
+        return False, False, 'commit: ' + ((c.stderr or c.stdout) or '')
+    p = push()
+    if p.returncode != 0:
+        return False, True, 'push: ' + ((p.stderr or p.stdout) or '')
+    return True, True, ''
+
+
 def main():
     cl = ensure_clone()
     if cl is not True:
@@ -106,32 +142,16 @@ def main():
         out({'ok': False, 'error': 'menu.json пустой — сначала «Обновить из R_Keeper»'})
         return 1
 
-    json.dump(menu, open(os.path.join(LIVE, 'menu.json'), 'w', encoding='utf-8'),
-              ensure_ascii=False, separators=(',', ':'))
-    for a in ASSETS:                      # ассеты шлём, если их ещё нет или изменились
-        src = os.path.join(HERE, a)
-        if os.path.isfile(src):
-            shutil.copy2(src, os.path.join(LIVE, a))
-
-    git('add', '-A')
-    if not git('status', '--porcelain').stdout.strip():
-        out({'ok': True, 'changed': False, 'total': menu.get('total', 0)})
-        return 0
-
-    stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
-    c = git('commit', '-m', 'menu %s · %d блюд' % (stamp, menu.get('total', 0)))
-    if c.returncode != 0 and 'nothing to commit' not in (c.stdout + c.stderr):
-        out({'ok': False, 'error': ('commit: ' + (c.stderr or c.stdout))[-400:]})
-        return 1
-    p = push()
-    if p.returncode != 0:
-        err = (p.stderr or p.stdout) or ''
+    ok, changed, err = attempt(menu)
+    if not ok:
+        ok, changed, err = attempt(menu)   # повтор: вдруг кто-то запушил между синком и push
+    if not ok:
         if TOKEN:
             err = err.replace(TOKEN, '***')
         hint = '' if TOKEN else ' (на клиентском боксе добавь gh_token= в config.ini)'
-        out({'ok': False, 'error': ('push: ' + err)[-400:] + hint})
+        out({'ok': False, 'error': err[-400:] + hint})
         return 1
-    out({'ok': True, 'changed': True, 'total': menu.get('total', 0)})
+    out({'ok': True, 'changed': changed, 'total': menu.get('total', 0)})
     return 0
 
 
