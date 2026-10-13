@@ -4,9 +4,13 @@
 Берём СТРОГО активные блюда, у которых есть классификация «Меню для сайта».
   РАЗДЕЛ (оглавление)  = членство в детях классификатора 4608 «Меню для сайта»
                          (4609 Основное, 4614 Завтрак, 4612 Детское, 4610 Винная карта…)
-  КАТЕГОРИЯ (внутри)   = членство в «ФирмКатегории» (4353..4363: 01.Салаты … 11.Прочее)
-Имя = Фирменное название (иначе кассовое); тянем Состав/Выход/БЖУ/Цену/Аллергены.
-Привязки блюдо→группа — из справочника DISHGROUPS (Parent=группа, Child=блюдо).
+  ПОДКАТЕГОРИЯ         = ПАПКА меню (товарная группа). Цепочка папок строится по
+                         MenuItems.Parent → CATEGLIST.Parent (сверху лежит корень «Все»,
+                         затем корень-раздел, затем сами подкатегории).
+  🚩 Имя папки: «Наименование для доставки» (расш. свойство 1195455, ObjectRefNo=13),
+                если заполнено; иначе обычное название группы.
+Имя блюда = Фирменное название (иначе кассовое); тянем Состав/Выход/БЖУ/Цену/Аллергены.
+Привязки блюдо→классификатор — из справочника DISHGROUPS (Parent=группа, Child=блюдо).
 Креды/адрес — ~/.secrets/rkeeper-tayny.
 """
 import base64, json, os, ssl, urllib.request
@@ -33,6 +37,7 @@ dat = rk('GENERATEDPROPDATAS')
 da = rk('DISHALLERGENS')
 pr = rk('PRICES')
 dg = rk('DISHGROUPS')
+CAT = {c.get('Ident'): c for c in rk('CATEGLIST')}      # товарные группы (папки меню)
 
 # разделы «Меню для сайта» (оглавление) — в порядке показа
 SECTIONS = OrderedDict([('4609', 'Основное меню'), ('4614', 'Меню завтраков'),
@@ -44,6 +49,13 @@ props = {}
 for d in dat:
     if d.get('ObjectRefNo') == '10' and d.get('RKTypeIdent') in TYPE:
         props.setdefault(d.get('ObjectIdent'), {})[TYPE[d.get('RKTypeIdent')]] = (d.get('PropertyVal') or '').strip()
+
+# 🚩 «Наименование для доставки» у ТОВАРНЫХ ГРУПП (ObjectRefNo=13, тип 1195455)
+GDELIV = {d.get('ObjectIdent'): (d.get('PropertyVal') or '').strip()
+          for d in dat
+          if d.get('ObjectRefNo') == '13' and d.get('RKTypeIdent') == '1195455'
+          and (d.get('PropertyVal') or '').strip()}
+
 alrg = defaultdict(set)
 for d in da:
     alrg[d.get('Child')].add(alg.get(d.get('Parent'), d.get('Parent')))
@@ -55,7 +67,34 @@ d2g = defaultdict(set)
 for x in dg:
     d2g[x.get('Child')].add(x.get('Parent'))
 
-# section_id -> OrderedDict{catname: [items]}  (категория = ПАПКА из CategPath)
+
+def gname(gid):
+    """Имя группы: «Наименование для доставки», иначе обычное название."""
+    return GDELIV.get(gid) or (CAT[gid].get('Name') if gid in CAT else '') or ''
+
+
+def gchain(gid):
+    """Цепочка групп от корня к листу (идентификаторы)."""
+    out, seen = [], set()
+    while gid and gid in CAT and gid not in seen:
+        seen.add(gid); out.append(gid); gid = CAT[gid].get('Parent')
+    return list(reversed(out))
+
+
+def subcat_of(mi):
+    """Подкатегория = папки ниже корня-раздела, через « · », с доставочными именами."""
+    ch = gchain(mi.get('Parent'))
+    if ch and CAT[ch[0]].get('Name') == 'Все':      # глобальный корень торговых групп
+        ch = ch[1:]
+    if ch:
+        levels = ch[1:] or ch[:1]                   # без корня-раздела; если ниже нечего — сам корень
+        return ' · '.join(x for x in (gname(g) for g in levels) if x) or 'Прочее'
+    # запасной путь: старый разбор «Пути по группам», если группа не нашлась в CATEGLIST
+    parts = [x for x in (mi.get('CategPath') or '').split('\\') if x]
+    return ' · '.join(parts[1:]) if len(parts) > 1 else (parts[0] if parts else 'Прочее')
+
+
+# section_id -> OrderedDict{catname: [items]}
 buckets = {s: OrderedDict() for s in SECTIONS}
 n = 0
 for ident, mi in MI.items():
@@ -65,9 +104,7 @@ for ident, mi in MI.items():
     secs = [s for s in SECTIONS if s in groups]
     if not secs:
         continue                                   # нет классификации «Меню для сайта» → пропуск
-    # подкатегория = папка меню (Путь по группам), без верхнего POS-корня
-    parts = [x for x in (mi.get('CategPath') or '').split('\\') if x]
-    subcat = ' · '.join(parts[1:]) if len(parts) > 1 else (parts[0] if parts else 'Прочее')
+    subcat = subcat_of(mi)
     p = props.get(ident, {})
     bju = {k: p[k] for k in ('kcal', 'bel', 'jir', 'ugl') if p.get(k)}
     item = OrderedDict(
