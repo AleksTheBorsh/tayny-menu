@@ -61,7 +61,10 @@ for d in da:
     alrg[d.get('Child')].add(alg.get(d.get('Parent'), d.get('Parent')))
 price = {}
 for p in pr:
-    if p.get('PriceType') == '3' and p.get('Modifiers') in ('[]', None, ''):
+    # 🚩 Species='psDish' — это именно ЦЕНА. У тех же позиций есть строки psLoLimit
+    # (нижний лимит, обычно 0) с тем же PriceType=3 — их брать нельзя, иначе цена «пропадает».
+    if (p.get('PriceType') == '3' and p.get('Modifiers') in ('[]', None, '')
+            and p.get('Species') == 'psDish'):
         price[p.get('ObjectID')] = int(p.get('Value') or 0)
 d2g = defaultdict(set)
 for x in dg:
