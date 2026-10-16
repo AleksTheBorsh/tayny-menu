@@ -73,6 +73,7 @@
   var imgFor = function (t) { return IMGBASE + '/' + (IMG[t] || 'sec_main.jpg'); };
 
   // ——— PDF для гостей (pdfmake подгружается лениво, только при клике) ———
+  var PDF_L = 57, PDF_W = 496;   // левое поле 2 см под сшиватель; ширина содержимого A4 (595.28−57−42)
   function pdfName(t) { return 'menu-' + (t || '').replace(/[^0-9A-Za-zА-Яа-яЁё]+/g, '_') + '.pdf'; }
   function ensurePdf(ok, fail) {
     if (window.pdfMake && window.pdfMake.vfs) { ok(); return; }
@@ -101,13 +102,14 @@
         if (cat.title && cat.title !== g.title) c.push({ text: (cat.title || '').toUpperCase(), fontSize: 11, bold: true, color: gold, margin: [0, 12, 0, 4] });
         (cat.items || []).forEach(function (it) {
           var wt = it.weight ? it.weight + '   ' : '', price = (it.price != null ? it.price + ' ₽' : '');
-          c.push({ columns: [{ text: it.name || '', width: '*', fontSize: 12.5, bold: true, color: navy }, { text: wt + price, width: 'auto', fontSize: 12.5, bold: true, color: navy, alignment: 'right' }], margin: [0, 7, 0, 0] });
-          if (it.desc) c.push({ text: it.desc, fontSize: 9.5, color: soft, margin: [0, 2, 0, 0] });
+          var st = [{ columns: [{ text: it.name || '', width: '*', fontSize: 12.5, bold: true, color: navy }, { text: wt + price, width: 'auto', noWrap: true, fontSize: 12.5, bold: true, color: navy, alignment: 'right' }] }];
+          if (it.desc) st.push({ text: it.desc, fontSize: 9.5, color: soft, margin: [0, 2, 0, 0] });
           var bj = it.bju || {}, ex = [];
           if (bj.kcal) ex.push(bj.kcal + ' ккал'); if (bj.bel) ex.push('Б ' + bj.bel); if (bj.jir) ex.push('Ж ' + bj.jir); if (bj.ugl) ex.push('У ' + bj.ugl);
           var ln = ex.join(' · '); if (it.allergens && it.allergens.length) ln += (ln ? '      ' : '') + 'Аллергены: ' + it.allergens.join(', ');
-          if (ln) c.push({ text: ln, fontSize: 8, color: faint, margin: [0, 2, 0, 0] });
-          c.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: .5, lineColor: line }], margin: [0, 7, 0, 0] });
+          if (ln) st.push({ text: ln, fontSize: 8, color: faint, margin: [0, 2, 0, 0] });
+          st.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_W, y2: 0, lineWidth: .5, lineColor: line }], margin: [0, 7, 0, 0] });
+          c.push({ stack: st, unbreakable: true, margin: [0, 7, 0, 0] });   // блюдо не рвём между страницами
         });
       });
     });
@@ -118,13 +120,13 @@
     var content = pdfBody(groups);
     if (logo) content.unshift({ image: logo, width: 150, alignment: 'center', margin: [0, 0, 0, 16] });
     // реквизиты мелким шрифтом внизу
-    content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: .8, lineColor: gold }], margin: [0, 16, 0, 8] });
+    content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_W, y2: 0, lineWidth: .8, lineColor: gold }], margin: [0, 16, 0, 8] });
     content.push({ text: 'Цены актуальны на ' + new Date().toLocaleDateString('ru-RU'), fontSize: 8, color: soft, alignment: 'center', margin: [0, 0, 0, 5] });
     content.push({ text: 'ООО «Камчатские тайны», ИНН 4100044714', fontSize: 7.5, color: faint, alignment: 'center' });
     content.push({ text: 'Ресторан «Тайны Камчатки» · Камчатский край, п. Паратунка, ул. Елизова, 6а', fontSize: 7.5, color: faint, alignment: 'center', margin: [0, 2, 0, 0] });
     content.push({ text: 'info@mysterykamchatka.com     ·     +7 914 999 88 99', fontSize: 7.5, color: faint, alignment: 'center', margin: [0, 2, 0, 0] });
     var dd = {
-      pageSize: 'A4', pageMargins: [42, 50, 42, 46],
+      pageSize: 'A4', pageMargins: [PDF_L, 50, 42, 46],
       background: function () { return { canvas: [{ type: 'rect', x: 0, y: 0, w: 595.28, h: 841.89, color: '#fbf8f1' }] }; },
       content: content,
       footer: function (cur, tot) { return { text: cur + ' / ' + tot, fontSize: 8, color: '#b9b2a6', alignment: 'center', margin: [0, 8, 0, 0] }; },
