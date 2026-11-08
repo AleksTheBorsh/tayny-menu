@@ -60,7 +60,20 @@
   #tk-menu .tk-ex{display:flex;flex-wrap:wrap;gap:7px 10px;margin-top:8px;font-size:12px;color:var(--tk-faint);}
   #tk-menu .tk-tag{background:#efe7d8;color:var(--tk-gold-d);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;}
   #tk-menu .tk-empty{text-align:center;color:var(--tk-faint);padding:40px 10px;}
-  #tk-menu .tk-pdfbar{display:flex;justify-content:flex-end;margin:0 0 10px;}
+  #tk-menu .tk-pdfbar{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin:0 0 10px;}
+  .tk-age{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(16,22,26,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .tk-age *{box-sizing:border-box;}
+  .tk-age-card{width:100%;max-width:420px;background:#fbf8f1;border-radius:18px;padding:28px 24px 20px;text-align:center;color:#20272b;box-shadow:0 24px 60px rgba(0,0,0,.4);}
+  .tk-age-logo{display:block;width:120px;height:auto;margin:0 auto 14px;}
+  .tk-age-q{font-family:Georgia,"Times New Roman",serif;font-size:23px;font-weight:600;color:#1b2a52;line-height:1.25;}
+  .tk-age-r{width:44px;height:2px;background:#b8945f;margin:12px auto;border-radius:2px;}
+  .tk-age-t{font-size:14px;color:#5d6b74;line-height:1.5;}
+  .tk-age-b{display:flex;gap:10px;margin-top:20px;}
+  .tk-age-b button{-webkit-appearance:none;appearance:none;margin:0;flex:1;cursor:pointer;font:inherit;font-size:15px;font-weight:700;line-height:1.2;border-radius:999px;padding:12px 14px;border:1.5px solid #1b2a52;transition:opacity .15s;}
+  .tk-age-yes{background:#1b2a52;color:#fff;}
+  .tk-age-no{background:#fff;color:#1b2a52;}
+  .tk-age-b button:hover{opacity:.88;}
+  .tk-age-w{font-size:11px;color:#9aa4ab;margin-top:16px;}
   #tk-menu .tk-pdf{cursor:pointer;font-size:13px;font-weight:700;border:1.5px solid var(--tk-navy);background:#fff;color:var(--tk-navy);border-radius:999px;padding:8px 16px;display:inline-flex;align-items:center;gap:6px;transition:.15s;}
   #tk-menu .tk-pdf:hover{background:var(--tk-navy);color:#fff;}
   #tk-menu .tk-pdf:disabled{opacity:.5;cursor:default;}
@@ -68,79 +81,75 @@
   var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
   var DATA = { groups: [] };
+  var num = function (v) { var n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isFinite(n) ? n : 0; };   // «0» в кассе = не заполнено
   var esc = function (s) { return (s || '').replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); };
   var IMG = { 'Основное меню': 'sec_main.jpg', 'Меню завтраков': 'sec_breakfast.jpg', 'Детское меню': 'sec_kids.jpg', 'Винная карта': 'sec_wine.jpg' };
   var imgFor = function (t) { return IMGBASE + '/' + (IMG[t] || 'sec_main.jpg'); };
 
-  // ——— PDF для гостей (pdfmake подгружается лениво, только при клике) ———
-  var PDF_L = 57, PDF_W = 496;   // левое поле 2 см под сшиватель; ширина содержимого A4 (595.28−57−42)
-  function pdfName(t) { return 'menu-' + (t || '').replace(/[^0-9A-Za-zА-Яа-яЁё]+/g, '_') + '.pdf'; }
+  // ——— PDF для гостей: pdfmake + общий генератор menupdf.js (тот же, что в админке) грузятся по клику ———
+  function loadScript(src, ok, fail) { var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); }
   function ensurePdf(ok, fail) {
-    if (window.pdfMake && window.pdfMake.vfs) { ok(); return; }
     var b = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/';
-    var s1 = document.createElement('script'); s1.src = b + 'pdfmake.min.js';
-    s1.onload = function () { var s2 = document.createElement('script'); s2.src = b + 'vfs_fonts.js'; s2.onload = ok; s2.onerror = fail; document.head.appendChild(s2); };
-    s1.onerror = fail; document.head.appendChild(s1);
+    function gen() { if (window.TKPDF) ok(); else loadScript(IMGBASE + '/menupdf.js', ok, fail); }
+    if (window.pdfMake && window.pdfMake.vfs) { gen(); return; }
+    loadScript(b + 'pdfmake.min.js', function () { loadScript(b + 'vfs_fonts.js', gen, fail); }, fail);
   }
-  var _logo;   // эмблема для шапки PDF (прозрачный PNG с CDN), тянем один раз
-  function getLogo(cb) {
-    if (_logo !== undefined) { cb(_logo); return; }
-    fetch(IMGBASE + '/logo.png').then(function (r) { return r.ok ? r.blob() : Promise.reject(); }).then(function (b) {
-      var fr = new FileReader();
-      fr.onload = function () { _logo = fr.result; cb(_logo); };
-      fr.onerror = function () { _logo = ''; cb(''); };
-      fr.readAsDataURL(b);
-    }).catch(function () { _logo = ''; cb(''); });
-  }
-  function pdfBody(groups) {
-    var navy = '#1b2a52', gold = '#9c7a46', soft = '#5d6b74', faint = '#9aa4ab', line = '#e5ddcd', c = [];
-    groups.forEach(function (g, gi) {
-      if (gi > 0) c.push({ text: '', pageBreak: 'before' });
-      c.push({ text: g.title, fontSize: 24, bold: true, color: navy, margin: [0, 0, 0, 3] });
-      c.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 64, y2: 0, lineWidth: 2, lineColor: gold }], margin: [0, 0, 0, 12] });
-      (g.categories || []).forEach(function (cat) {
-        if (cat.title && cat.title !== g.title) c.push({ text: (cat.title || '').toUpperCase(), fontSize: 11, bold: true, color: gold, margin: [0, 12, 0, 4] });
-        (cat.items || []).forEach(function (it) {
-          var wt = it.weight ? it.weight + '   ' : '', price = (it.price != null ? it.price + ' ₽' : '');
-          var st = [{ columns: [{ text: it.name || '', width: '*', fontSize: 12.5, bold: true, color: navy }, { text: wt + price, width: 'auto', noWrap: true, fontSize: 12.5, bold: true, color: navy, alignment: 'right' }] }];
-          if (it.desc) st.push({ text: it.desc, fontSize: 9.5, color: soft, margin: [0, 2, 0, 0] });
-          var bj = it.bju || {}, ex = [];
-          if (bj.kcal) ex.push(bj.kcal + ' ккал'); if (bj.bel) ex.push('Б ' + bj.bel); if (bj.jir) ex.push('Ж ' + bj.jir); if (bj.ugl) ex.push('У ' + bj.ugl);
-          var ln = ex.join(' · '); if (it.allergens && it.allergens.length) ln += (ln ? '      ' : '') + 'Аллергены: ' + it.allergens.join(', ');
-          if (ln) st.push({ text: ln, fontSize: 8, color: faint, margin: [0, 2, 0, 0] });
-          st.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_W, y2: 0, lineWidth: .5, lineColor: line }], margin: [0, 7, 0, 0] });
-          c.push({ stack: st, unbreakable: true, margin: [0, 7, 0, 0] });   // блюдо не рвём между страницами
-        });
-      });
+  // две кнопки: полное меню (состав, БЖУ, аллергены) и краткое (название, выход, цена)
+  var PDFBAR = '<div class="tk-pdfbar">' +
+    '<button class="tk-pdf" type="button" data-mode="full">⤓ PDF полное</button>' +
+    '<button class="tk-pdf" type="button" data-mode="short">⤓ PDF краткое</button></div>';
+  function wirePdf(groups, title) {
+    root.querySelectorAll('.tk-pdf').forEach(function (pbtn) {
+      pbtn.onclick = function () {
+        var mode = pbtn.getAttribute('data-mode') || 'full', o = pbtn.innerHTML;
+        var go = function () {
+          pbtn.disabled = true; pbtn.innerHTML = 'Готовлю PDF…';
+          var done = function () { pbtn.disabled = false; pbtn.innerHTML = o; };
+          ensurePdf(function () {
+            TKPDF.getLogo(IMGBASE + '/logo.png', function (logo) {
+              try { TKPDF.download(groups, { mode: mode, logo: logo, fname: TKPDF.fileName(title, mode) }); } catch (e) {}
+              done();
+            });
+          }, function () { done(); alert('Не удалось сформировать PDF (нет связи с CDN).'); });
+        };
+        // PDF всего меню включает алкоголь — без подтверждения возраста не отдаём
+        if (groups.some(needsAge) && !ageOk()) ageGate(go, function () {}); else go();
+      };
     });
-    return c;
   }
-  function makePdf(groups, fname, logo) {
-    var gold = '#9c7a46', soft = '#5d6b74', faint = '#9aa4ab';
-    var content = pdfBody(groups);
-    if (logo) content.unshift({ image: logo, width: 150, alignment: 'center', margin: [0, 0, 0, 16] });
-    // реквизиты мелким шрифтом внизу
-    content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_W, y2: 0, lineWidth: .8, lineColor: gold }], margin: [0, 16, 0, 8] });
-    content.push({ text: 'Цены актуальны на ' + new Date().toLocaleDateString('ru-RU'), fontSize: 8, color: soft, alignment: 'center', margin: [0, 0, 0, 5] });
-    content.push({ text: 'ООО «Камчатские тайны», ИНН 4100044714', fontSize: 7.5, color: faint, alignment: 'center' });
-    content.push({ text: 'Ресторан «Тайны Камчатки» · Камчатский край, п. Паратунка, ул. Елизова, 6а', fontSize: 7.5, color: faint, alignment: 'center', margin: [0, 2, 0, 0] });
-    content.push({ text: 'info@mysterykamchatka.com     ·     +7 914 999 88 99', fontSize: 7.5, color: faint, alignment: 'center', margin: [0, 2, 0, 0] });
-    var dd = {
-      pageSize: 'A4', pageMargins: [PDF_L, 50, 42, 46],
-      background: function () { return { canvas: [{ type: 'rect', x: 0, y: 0, w: 595.28, h: 841.89, color: '#fbf8f1' }] }; },
-      content: content,
-      footer: function (cur, tot) { return { text: cur + ' / ' + tot, fontSize: 8, color: '#b9b2a6', alignment: 'center', margin: [0, 8, 0, 0] }; },
-      defaultStyle: { font: 'Roboto' }
-    };
-    pdfMake.createPdf(dd).download(fname);
+
+  // ——— Возрастной барьер 18+ для алкогольных разделов ———
+  // Включается сам для «Винной карты» / «Барной карты» / «Алкоголь»; data-age="0" — выключить,
+  // data-age="18" — включить принудительно; data-age-exit="URL" — куда уводить по «Нет» (по умолчанию главная).
+  var AGE_KEY = 'tk_age18_ok', AGE_DAYS = 30;
+  function ageOk() { try { var t = +localStorage.getItem(AGE_KEY); return !!t && (Date.now() - t) < AGE_DAYS * 864e5; } catch (e) { return false; } }
+  function ageSave() { try { localStorage.setItem(AGE_KEY, String(Date.now())); } catch (e) {} }
+  function needsAge(g) {
+    var a = root.getAttribute('data-age');
+    if (a === '0') return false;
+    if (a) return true;
+    return /винн[а-яё]*\s+карт|алкогол|барн[а-яё]*\s+(карт|меню)/i.test((g && g.title) || '');
   }
-  function wirePdf(groups, fname) {
-    var pbtn = root.querySelector('.tk-pdf'); if (!pbtn) return;
-    pbtn.onclick = function () {
-      var o = pbtn.innerHTML; pbtn.disabled = true; pbtn.innerHTML = 'Готовлю PDF…';
-      ensurePdf(function () { getLogo(function (logo) { try { makePdf(groups, fname, logo); } catch (e) {} pbtn.disabled = false; pbtn.innerHTML = o; }); },
-                function () { pbtn.disabled = false; pbtn.innerHTML = o; alert('Не удалось сформировать PDF (нет связи с CDN).'); });
-    };
+  function ageGate(onYes, onNo) {
+    var html = document.documentElement, prev = html.style.overflow;
+    html.style.overflow = 'hidden';
+    var ov = document.createElement('div');
+    ov.className = 'tk-age'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+    ov.innerHTML = '<div class="tk-age-card">' +
+      '<img class="tk-age-logo" src="' + IMGBASE + '/logo.png" alt="Тайны Камчатки">' +
+      '<div class="tk-age-q">Вам уже исполнилось 18&nbsp;лет?</div><div class="tk-age-r"></div>' +
+      '<div class="tk-age-t">Раздел содержит информацию об алкогольной продукции и предназначен только для совершеннолетних.</div>' +
+      '<div class="tk-age-b"><button type="button" class="tk-age-yes">Да, мне есть 18</button><button type="button" class="tk-age-no">Нет</button></div>' +
+      '<div class="tk-age-w">Чрезмерное употребление алкоголя вредит вашему здоровью</div></div>';
+    document.body.appendChild(ov);
+    var close = function () { html.style.overflow = prev; if (ov.parentNode) ov.parentNode.removeChild(ov); };
+    ov.querySelector('.tk-age-yes').onclick = function () { ageSave(); close(); onYes(); };
+    ov.querySelector('.tk-age-no').onclick = function () { close(); onNo(); };
+    setTimeout(function () { var y = ov.querySelector('.tk-age-yes'); if (y) y.focus(); }, 30);
+  }
+  function ageExit() {
+    root.innerHTML = '<div class="tk-empty">Раздел доступен только совершеннолетним.</div>';
+    location.href = root.getAttribute('data-age-exit') || '/';
   }
 
   function load(cb) {
@@ -156,7 +165,7 @@
   function dish(it) {
     var pr = it.price != null ? ((it.weight ? '<span class="tk-wt">' + esc(it.weight) + '</span>' : '') + it.price + ' ₽') : (it.weight ? '<span class="tk-wt">' + esc(it.weight) + '</span>' : '');
     var alg = (it.allergens || []).map(function (a) { return '<span class="tk-tag">' + esc(a) + '</span>'; }).join('');
-    var bju = (it.bju && Object.keys(it.bju).length) ? ['kcal', 'bel', 'jir', 'ugl'].filter(function (k) { return it.bju[k]; }).map(function (k) { return ({ kcal: 'ккал', bel: 'Б', jir: 'Ж', ugl: 'У' })[k] + ' ' + esc(it.bju[k]); }).join(' · ') : '';
+    var bju = (it.bju && Object.keys(it.bju).length) ? ['kcal', 'bel', 'jir', 'ugl'].filter(function (k) { return num(it.bju[k]) > 0; }).map(function (k) { return ({ kcal: 'ккал', bel: 'Б', jir: 'Ж', ugl: 'У' })[k] + ' ' + esc(it.bju[k]); }).join(' · ') : '';
     return '<div class="tk-dish"><div class="tk-l1"><div class="tk-nm">' + esc(it.name) + '</div><div class="tk-pr">' + pr + '</div></div>' +
       (it.desc ? '<div class="tk-ds">' + esc(it.desc) + '</div>' : '') +
       ((bju || alg) ? '<div class="tk-ex">' + (bju ? '<span>' + bju + '</span>' : '') + alg + '</div>' : '') + '</div>';
@@ -173,7 +182,7 @@
   }
 
   function landing() {
-    var h = '<div class="tk-pdfbar"><button class="tk-pdf" type="button">⤓ Скачать всё меню (PDF)</button></div><div class="tk-cards">';
+    var h = PDFBAR + '<div class="tk-cards">';
     (DATA.groups || []).forEach(function (g, i) {
       var n = g.count || g.categories.reduce(function (a, c) { return a + c.items.length; }, 0);
       h += '<div class="tk-card" data-sec="' + i + '"><div class="tk-bg" style="background-image:url(\'' + imgFor(g.title) + '\')"></div><div class="tk-scrim"></div>' +
@@ -181,11 +190,16 @@
     });
     root.innerHTML = h + '</div>';
     root.querySelectorAll('.tk-card').forEach(function (el) { el.onclick = function () { section(+el.dataset.sec); }; });
-    wirePdf(DATA.groups || [], 'menu-tayny-kamchatki.pdf');
+    wirePdf(DATA.groups || [], 'Тайны Камчатки');
   }
 
   function section(i, direct) {
     var g = (DATA.groups || [])[i]; if (!g) return;
+    if (needsAge(g) && !ageOk()) {   // алкоголь: сначала спрашиваем возраст, меню не рисуем
+      root.innerHTML = '<div class="tk-empty">Раздел для лиц старше 18 лет.</div>';
+      ageGate(function () { section(i, direct); }, direct ? ageExit : landing);
+      return;
+    }
     var m = model(g), cur = 0;
     function render() {
       var c = m.chips[cur];
@@ -194,7 +208,7 @@
         h += '<div class="tk-head"><button class="tk-back">← Разделы</button><span class="tk-ttl tk-serif">' + esc(g.title) + '</span></div>';
         h += '<div class="tk-row">' + (DATA.groups || []).map(function (gg, k) { return '<button class="tk-sec' + (k === i ? ' tk-on' : '') + '" data-s="' + k + '">' + esc(gg.title) + '</button>'; }).join('') + '</div>';
       }
-      h += '<div class="tk-pdfbar"><button class="tk-pdf" type="button">⤓ Скачать PDF</button></div>';
+      h += PDFBAR;
       if (m.chips.length > 1)   // переключатель папок нужен только когда папок больше одной
         h += '<div class="tk-chips">' + m.chips.map(function (ch, k) { return '<button class="tk-chip' + (k === cur ? ' tk-on' : '') + '" data-c="' + k + '">' + esc(ch) + '</button>'; }).join('') + '</div>';
       h += '<div class="tk-cathdr"><div class="tk-t tk-serif">' + esc(c) + '</div><div class="tk-r"></div></div>';
@@ -205,7 +219,7 @@
         root.querySelectorAll('.tk-sec').forEach(function (el) { el.onclick = function () { section(+el.dataset.s); }; });
       }
       root.querySelectorAll('.tk-chip').forEach(function (el) { el.onclick = function () { cur = +el.dataset.c; render(); root.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
-      wirePdf([g], pdfName(g.title));   // кнопка «Скачать PDF» — весь раздел целиком
+      wirePdf([g], g.title);   // кнопки PDF — весь раздел целиком
     }
     render();
   }

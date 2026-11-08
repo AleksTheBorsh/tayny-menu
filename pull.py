@@ -71,6 +71,13 @@ for x in dg:
     d2g[x.get('Child')].add(x.get('Parent'))
 
 
+def _num(v):
+    try:
+        return float(str(v).replace(',', '.'))
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def gname(gid):
     """Имя группы: «Наименование для доставки», иначе обычное название."""
     return GDELIV.get(gid) or (CAT[gid].get('Name') if gid in CAT else '') or ''
@@ -109,7 +116,7 @@ for ident, mi in MI.items():
         continue                                   # нет классификации «Меню для сайта» → пропуск
     subcat = subcat_of(mi)
     p = props.get(ident, {})
-    bju = {k: p[k] for k in ('kcal', 'bel', 'jir', 'ugl') if p.get(k)}
+    bju = {k: p[k] for k in ('kcal', 'bel', 'jir', 'ugl') if _num(p.get(k)) > 0}   # «0» в кассе = не заполнено
     item = OrderedDict(
         id=ident,
         name=p.get('brand') or mi.get('Name'),

@@ -42,12 +42,13 @@
   .toast.show{opacity:1;}
   .sec>.h{cursor:pointer;}
   .sec>.h .caret{color:var(--faint);width:14px;display:inline-block;flex:none;}
-  .pdf{font:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--gold);background:#fff;color:var(--gold-d);border-radius:7px;padding:5px 11px;margin-left:10px;flex:none;}
+  .pdf{font:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--gold);background:#fff;color:var(--gold-d);border-radius:7px;padding:5px 11px;margin-left:8px;flex:none;white-space:nowrap;}
   .pdf:hover{background:var(--gold);color:#fff;}
   .hidden{display:none!important;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js"></script>
+<script src="menupdf.js"></script>
 </head>
 <body>
 
@@ -118,7 +119,8 @@ function render(){
           <button class="mv" ${gi===0?'disabled':''} onclick="moveSec(${gi},-1,event)">↑</button>
           <button class="mv" ${gi===MODEL.length-1?'disabled':''} onclick="moveSec(${gi},1,event)">↓</button>
         </span>
-        <button class="pdf" onclick="genPdf(${gi},event)">PDF</button>
+        <button class="pdf" title="Полное: состав, БЖУ, аллергены" onclick="genPdf(${gi},event,'full')">PDF</button>
+        <button class="pdf" title="Краткое: название, выход, цена" onclick="genPdf(${gi},event,'short')">PDF кратко</button>
       </div>`;
     if(g.open) g.cats.forEach((c,ci)=>{
       h+=`<div class="cat${c.open?' open':''}">
@@ -147,10 +149,11 @@ function moveDish(gi,ci,ii,d,e){e.stopPropagation();const a=MODEL[gi].cats[ci].i
 function togSec(gi){MODEL[gi].open=!MODEL[gi].open;render();}
 function moveSec(gi,d,e){e.stopPropagation();const j=gi+d;if(j<0||j>=MODEL.length)return;[MODEL[gi],MODEL[j]]=[MODEL[j],MODEL[gi]];setDirty(true);render();}
 
-// PDF раздела — строго из СОХРАНЁННОГО меню (menu.json уже с применённым порядком разделов/папок/блюд)
-async function genPdf(gi,e){
+// PDF раздела — строго из СОХРАНЁННОГО меню (menu.json уже с применённым порядком разделов/папок/блюд).
+// Вёрстку делает общий menupdf.js — тот же файл, что у кнопок на сайте. mode: 'full' | 'short'
+async function genPdf(gi,e,mode){
   e&&e.stopPropagation();
-  if(!window.pdfMake){toast('PDF-движок не загрузился (нужен интернет)');return;}
+  if(!window.pdfMake||!window.TKPDF){toast('PDF-движок не загрузился (нужен интернет)');return;}
   const title=MODEL[gi].title;
   toast(dirty?'PDF берёт СОХРАНЁННЫЙ порядок — сохраните, если хотите учесть правки':'Готовлю PDF…',dirty?4500:3000);
   let d;
@@ -158,48 +161,10 @@ async function genPdf(gi,e){
   catch(_){ toast('Не удалось прочитать меню'); return; }
   const g=(d.groups||[]).find(x=>x.title===title);
   if(!g){ toast('Раздел не найден'); return; }
-  const navy='#1b2a52',gold='#9c7a46',soft='#5d6b74',faint='#9aa4ab',line='#e5ddcd',cream='#fbf8f1';
-  const PDF_L=57, PDF_W=496;   // левое поле 2 см под сшиватель; ширина содержимого A4 (595.28-57-42)
-  const content=[{text:g.title,fontSize:24,bold:true,color:navy,margin:[0,0,0,3]},
-    {canvas:[{type:'line',x1:0,y1:0,x2:64,y2:0,lineWidth:2,lineColor:gold}],margin:[0,0,0,12]}];
-  (g.categories||[]).forEach(c=>{
-    if(c.title && c.title!==g.title)
-      content.push({text:(c.title||'').toUpperCase(),fontSize:11,bold:true,color:gold,margin:[0,12,0,4]});
-    (c.items||[]).forEach(it=>{
-      const wt=it.weight?it.weight+'   ':'';
-      const price=(it.price!=null?it.price+' ₽':'');
-      const st=[{columns:[
-        {text:it.name||'',width:'*',fontSize:12.5,bold:true,color:navy},
-        {text:wt+price,width:'auto',noWrap:true,fontSize:12.5,bold:true,color:navy,alignment:'right'}
-      ]}];
-      if(it.desc) st.push({text:it.desc,fontSize:9.5,color:soft,margin:[0,2,0,0]});
-      const b=it.bju||{},ex=[];
-      if(b.kcal)ex.push(b.kcal+' ккал'); if(b.bel)ex.push('Б '+b.bel); if(b.jir)ex.push('Ж '+b.jir); if(b.ugl)ex.push('У '+b.ugl);
-      let ln=ex.join(' · ');
-      if(it.allergens&&it.allergens.length) ln+=(ln?'      ':'')+'Аллергены: '+it.allergens.join(', ');
-      if(ln) st.push({text:ln,fontSize:8,color:faint,margin:[0,2,0,0]});
-      st.push({canvas:[{type:'line',x1:0,y1:0,x2:PDF_W,y2:0,lineWidth:.5,lineColor:line}],margin:[0,7,0,0]});
-      content.push({stack:st,unbreakable:true,margin:[0,7,0,0]});   // блюдо не рвём между страницами
-    });
+  TKPDF.getLogo('logo.png',function(logo){
+    try{ TKPDF.download([g],{mode:mode,logo:logo,fname:TKPDF.fileName(g.title,mode)}); }
+    catch(err){ toast('Ошибка PDF: '+err.message,6000); }
   });
-  // эмблема в шапку (прозрачный PNG, отдаётся этим же сервером)
-  let logo='';
-  try{ const lb=await (await fetch('logo.png')).blob();
-       logo=await new Promise(function(res){const fr=new FileReader();fr.onload=function(){res(fr.result);};fr.onerror=function(){res('');};fr.readAsDataURL(lb);}); }catch(_){}
-  if(logo) content.unshift({image:logo,width:150,alignment:'center',margin:[0,0,0,16]});
-  // реквизиты мелким шрифтом внизу
-  content.push({canvas:[{type:'line',x1:0,y1:0,x2:PDF_W,y2:0,lineWidth:.8,lineColor:gold}],margin:[0,16,0,8]});
-  content.push({text:'Цены актуальны на '+new Date().toLocaleDateString('ru-RU'),fontSize:8,color:soft,alignment:'center',margin:[0,0,0,5]});
-  content.push({text:'ООО «Камчатские тайны», ИНН 4100044714',fontSize:7.5,color:faint,alignment:'center'});
-  content.push({text:'Ресторан «Тайны Камчатки» · Камчатский край, п. Паратунка, ул. Елизова, 6а',fontSize:7.5,color:faint,alignment:'center',margin:[0,2,0,0]});
-  content.push({text:'info@mysterykamchatka.com     ·     +7 914 999 88 99',fontSize:7.5,color:faint,alignment:'center',margin:[0,2,0,0]});
-  const dd={pageSize:'A4',pageMargins:[PDF_L,50,42,46],
-    background:function(){return {canvas:[{type:'rect',x:0,y:0,w:595.28,h:841.89,color:cream}]};},
-    content:content,
-    footer:function(cur,tot){return {text:cur+' / '+tot,fontSize:8,color:'#b9b2a6',alignment:'center',margin:[0,8,0,0]};},
-    defaultStyle:{font:'Roboto'}};
-  const fn='menu-'+(g.title||'').replace(/[^0-9A-Za-zА-Яа-яЁё]+/g,'_')+'.pdf';
-  pdfMake.createPdf(dd).download(fn);
 }
 
 async function save(){

@@ -89,7 +89,7 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, json.dumps(load('order.json', {})), 'application/json; charset=utf-8')
         name = os.path.basename(p.lstrip('/')); ext = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
         MIME = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'svg': 'image/svg+xml',
-                'webp': 'image/webp', 'css': 'text/css', 'js': 'text/javascript'}
+                'webp': 'image/webp', 'css': 'text/css; charset=utf-8', 'js': 'text/javascript; charset=utf-8'}
         if ext in MIME and os.path.isfile(os.path.join(HERE, name)): return self._file(name, MIME[ext])
         return self._send(404, 'not found', 'text/plain')
 
