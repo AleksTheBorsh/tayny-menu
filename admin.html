@@ -188,7 +188,7 @@ async function publish(){
   if(dirty&&!confirm('Есть несохранённые изменения порядка. Выгрузить текущее сохранённое меню? (новый порядок попадёт на сайт только после «Сохранить»)'))return;
   const b=$('publish');b.disabled=true;const o=b.textContent;b.textContent='Выгружаю…';toast('Публикую меню на сайт…',9000);
   try{const j=await (await fetch('/api/publish',{method:'POST',headers:hdr()})).json();
-    if(j.ok)toast(j.changed===false?'На сайте уже актуально — изменений нет':('Опубликовано на сайте · '+(j.total||0)+' блюд · обновится на Tilda за ~1 мин'),5000);
+    if(j.ok)toast(j.changed===false?'На сайте уже актуально — изменений нет':('Опубликовано на сайте · '+(j.total||0)+' блюд · на сайте обновится в течение 5 мин'),5000);
     else toast('Ошибка публикации: '+(j.error||''),7000);}
   catch(e){toast('Не удалось опубликовать');}
   b.disabled=false;b.textContent=o;
