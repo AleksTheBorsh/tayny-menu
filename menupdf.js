@@ -9,6 +9,8 @@
   var PAGE_W = 595.28, PAGE_H = 841.89;
   var ML = 57, MT = 50, MR = 42, MB = 46;            // слева 57pt = 2 см под сшиватель
   var CW = Math.floor(PAGE_W - ML - MR);             // ширина содержимого и всех линеек (496)
+  // как раздел называется в PDF, если печатное название отличается от кассового
+  var PRINT_TITLE = { 'Основное меню': 'Меню' };
   var C = { navy: '#1b2a52', gold: '#9c7a46', soft: '#5d6b74', faint: '#9aa4ab',
             line: '#e5ddcd', cream: '#fbf8f1', pager: '#b9b2a6' };
 
@@ -25,12 +27,14 @@
 
   // строки одного блюда; top — отступ над названием
   function dishRows(it, mode, top) {
-    var wt = it.weight ? it.weight + '   ' : '';
     var price = it.price != null ? it.price + ' ₽' : '';
+    var right = [];   // выход — мельче и светлее, цена — крупно; одна строка, по базовой линии
+    if (it.weight) right.push({ text: it.weight + (price ? '   ' : ''), fontSize: 9.5, bold: false, color: C.soft });
+    if (price) right.push({ text: price });
     var rows = [{ margin: [0, top, 0, 0], columns: [
       { text: it.name || '', width: '*', fontSize: 12.5, bold: true, color: C.navy },
       // цена с выходом никогда не переносится — переносится длинное название
-      { text: wt + price, width: 'auto', noWrap: true, fontSize: 12.5, bold: true, color: C.navy, alignment: 'right' }
+      { text: right.length ? right : '', width: 'auto', noWrap: true, fontSize: 12.5, bold: true, color: C.navy, alignment: 'right' }
     ] }];
     if (mode !== 'short') {
       if (it.desc) rows.push({ text: it.desc, fontSize: 9.5, color: C.soft, margin: [0, 2, 0, 0] });
@@ -48,7 +52,7 @@
     groups.forEach(function (g, gi) {
       if (gi > 0) c.push({ text: '', pageBreak: 'before' });
       var pending = [   // заголовок раздела — приклеится к первому блюду
-        { text: g.title, fontSize: 24, bold: true, color: C.navy, margin: [0, 0, 0, 3] },
+        { text: PRINT_TITLE[g.title] || g.title, fontSize: 24, bold: true, color: C.navy, margin: [0, 0, 0, 3] },
         { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 64, y2: 0, lineWidth: 2, lineColor: C.gold }], margin: [0, 0, 0, 12] }
       ];
       (g.categories || []).forEach(function (cat) {
