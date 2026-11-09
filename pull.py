@@ -71,6 +71,35 @@ for x in dg:
     d2g[x.get('Child')].add(x.get('Parent'))
 
 
+# 🚩 Уровень папок с таким «Наименованием для доставки» не показываем — соглашение ресторана
+#    («Вино» → «*», чтобы было «Игристые вина», а не «Вино · Игристые вина»).
+HIDE_LEVEL = {'*'}
+# 🚩 Подпапки внутри этих папок сливаются в одну (ШЕФ 09.11: холодные закуски без деления на
+#    рыбную/мясную гастрономию, морепродукты и т. д.). Ключ — раздел, значение — папки.
+FLATTEN = {'Основное меню': ['Холодные закуски']}
+
+
+def tidy(section_title, cats):
+    """Причёсывает папки раздела. cats: OrderedDict{название: [блюда]} → такой же OrderedDict.
+    1) Если ВСЕ папки раздела лежат в одной общей папке-обёртке («Завтрак A la Carte · …»,
+       «Винная карта · …») — обёртка ничего не сообщает, убираем её из названий.
+    2) Папки из FLATTEN поглощают свои подпапки (блюда идут подряд, по подпапкам)."""
+    titles = list(cats)
+    firsts = {t.split(' · ')[0] for t in titles}
+    if len(titles) > 1 and len(firsts) == 1:
+        wrap = firsts.pop() + ' · '
+        new = OrderedDict()
+        for t, items in cats.items():
+            new.setdefault(t[len(wrap):] if t.startswith(wrap) else t, []).extend(items)
+        cats = new
+    for f in FLATTEN.get(section_title, []):
+        new = OrderedDict()
+        for t, items in cats.items():
+            new.setdefault(f if (t == f or t.startswith(f + ' · ')) else t, []).extend(items)
+        cats = new
+    return cats
+
+
 def _num(v):
     try:
         return float(str(v).replace(',', '.'))
@@ -98,7 +127,7 @@ def subcat_of(mi):
         ch = ch[1:]
     if ch:
         levels = ch[1:] or ch[:1]                   # без корня-раздела; если ниже нечего — сам корень
-        return ' · '.join(x for x in (gname(g) for g in levels) if x) or 'Прочее'
+        return ' · '.join(x for x in (gname(g) for g in levels) if x and x.strip() not in HIDE_LEVEL) or 'Прочее'
     # запасной путь: старый разбор «Пути по группам», если группа не нашлась в CATEGLIST
     parts = [x for x in (mi.get('CategPath') or '').split('\\') if x]
     return ' · '.join(parts[1:]) if len(parts) > 1 else (parts[0] if parts else 'Прочее')
@@ -138,9 +167,10 @@ for s, title in SECTIONS.items():
     cats = buckets[s]
     if not cats:
         continue
+    cats = tidy(title, OrderedDict((t, sorted(v, key=lambda x: x['name'].lower())) for t, v in cats.items()))
     g = OrderedDict(title=title, count=sum(len(v) for v in cats.values()), categories=[])
     for cname, items in cats.items():
-        g['categories'].append(OrderedDict(title=cname, items=sorted(items, key=lambda x: x['name'].lower())))
+        g['categories'].append(OrderedDict(title=cname, items=items))
     out['groups'].append(g)
 
 HERE = os.path.dirname(os.path.abspath(__file__))

@@ -11,6 +11,9 @@
   var CW = Math.floor(PAGE_W - ML - MR);             // ширина содержимого и всех линеек (496)
   // как раздел называется в PDF, если печатное название отличается от кассового
   var PRINT_TITLE = { 'Основное меню': 'Меню' };
+  // папки, которые в PDF стоят отдельной страницей (ШЕФ 09.11: «Специальное предложение» само по себе)
+  var SOLO = ['специальное предложение'];
+  function isSolo(t) { return SOLO.indexOf(String(t || '').trim().toLowerCase()) >= 0; }
   var C = { navy: '#1b2a52', gold: '#9c7a46', soft: '#5d6b74', faint: '#9aa4ab',
             line: '#e5ddcd', cream: '#fbf8f1', pager: '#b9b2a6' };
 
@@ -55,18 +58,25 @@
         { text: PRINT_TITLE[g.title] || g.title, fontSize: 24, bold: true, color: C.navy, margin: [0, 0, 0, 3] },
         { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 64, y2: 0, lineWidth: 2, lineColor: C.gold }], margin: [0, 0, 0, 12] }
       ];
+      var first = true, breakNext = false;
       (g.categories || []).forEach(function (cat) {
         var items = cat.items || [];
         if (!items.length) return;
+        var solo = isSolo(cat.title);
+        // отдельная страница: перед «одиночной» папкой (если она не первая в разделе) и после неё
+        var newPage = breakNext || (solo && !first);
         if (cat.title && cat.title !== g.title)
-          pending.push({ text: cat.title.toUpperCase(), fontSize: 11, bold: true, color: C.gold, margin: [0, 12, 0, 4] });
+          pending.push({ text: cat.title.toUpperCase(), fontSize: 11, bold: true, color: C.gold, margin: [0, newPage ? 0 : 12, 0, 4] });
         items.forEach(function (it, k) {
           var rows = dishRows(it, mode, gap);
           // 🚩 блюдо целиком — один неразрывный блок; заголовок папки (и раздела) склеен с ПЕРВЫМ блюдом,
           // поэтому заголовок больше не может остаться один внизу страницы
           if (k === 0 && pending.length) { rows = pending.concat(rows); pending = []; }
-          c.push({ stack: rows, unbreakable: true });
+          var node = { stack: rows, unbreakable: true };
+          if (k === 0 && newPage) node.pageBreak = 'before';
+          c.push(node);
         });
+        breakNext = solo; first = false;
       });
       if (pending.length) c = c.concat(pending);   // раздел без блюд — просто заголовок
     });

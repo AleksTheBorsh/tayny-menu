@@ -29,24 +29,41 @@ def load(name, default):
         return default
 
 
+def _fmatch(saved, name):
+    """Сохранённое в order.json имя папки подходит к текущему: совпадает, или у папки убрали обёртку
+    («Завтрак A la Carte · Блины» → «Блины»), или подпапки слили («Холодные закуски · Морепродукты» →
+    «Холодные закуски»). Так ручной порядок из админки переживает переименования папок."""
+    return saved == name or saved.endswith(' · ' + name) or saved.startswith(name + ' · ')
+
+
+def _pos(lst, name):
+    if name in lst:
+        return lst.index(name)
+    for i, v in enumerate(lst):
+        if _fmatch(v, name):
+            return i
+    return len(lst)
+
+
 def apply_order(menu):
+    """Порядок разделов/папок/блюд из order.json. Используется и витриной, и publish.py."""
     order = load('order.json', {})
-    fo = order.get('folders', {})       # {sectionTitle:[folderTitle,...]}
-    do = order.get('dishes', {})        # {sectionTitle\x01folderTitle:[id,...]}
-    so = order.get('sections', [])      # [sectionTitle,...]
-    def idx(lst, v):
-        return lst.index(v) if v in lst else len(lst)
+    fo, do, so = order.get('folders', {}), order.get('dishes', {}), order.get('sections', [])
     groups = menu.get('groups', [])
     if so:
-        groups.sort(key=lambda g: idx(so, g['title']))
+        groups.sort(key=lambda g: so.index(g['title']) if g['title'] in so else len(so))
     for g in groups:
-        fl = fo.get(g['title'])
+        fl = fo.get(g['title']) or []
         if fl:
-            g['categories'].sort(key=lambda c: idx(fl, c['title']))
+            g['categories'].sort(key=lambda c: _pos(fl, c['title']))
         for c in g['categories']:
             dl = do.get(g['title'] + SEP + c['title'])
+            if dl is None and c['title'] not in fl:
+                # папку переименовали/слили — берём сохранённый порядок блюд со старых папок, по их порядку
+                olds = [f for f in fl if _fmatch(f, c['title'])]
+                dl = [i for f in olds for i in do.get(g['title'] + SEP + f, [])] or None
             if dl:
-                c['items'].sort(key=lambda it: idx(dl, it.get('id')))
+                c['items'].sort(key=lambda it: dl.index(it.get('id')) if it.get('id') in dl else len(dl))
     return menu
 
 

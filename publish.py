@@ -27,6 +27,7 @@ import subprocess
 import sys
 
 from tkconfig import CFG
+from serve import apply_order   # тот же порядок, что отдаёт витрина (одна реализация)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LIVE = (CFG.get('live_dir') or os.environ.get('TAYNY_LIVE_DIR')
@@ -45,26 +46,6 @@ def load(name, default):
         return json.load(open(os.path.join(HERE, name), encoding='utf-8'))
     except Exception:
         return default
-
-
-def apply_order(menu):
-    """Тот же порядок, что отдаёт витрина (serve.apply_order)."""
-    order = load('order.json', {})
-    fo, do, so = order.get('folders', {}), order.get('dishes', {}), order.get('sections', [])
-    def idx(lst, v):
-        return lst.index(v) if v in lst else len(lst)
-    groups = menu.get('groups', [])
-    if so:
-        groups.sort(key=lambda g: idx(so, g['title']))
-    for g in groups:
-        fl = fo.get(g['title'])
-        if fl:
-            g['categories'].sort(key=lambda c: idx(fl, c['title']))
-        for c in g['categories']:
-            dl = do.get(g['title'] + SEP + c['title'])
-            if dl:
-                c['items'].sort(key=lambda it: idx(dl, it.get('id')))
-    return menu
 
 
 def git(*args):
